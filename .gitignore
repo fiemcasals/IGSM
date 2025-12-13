@@ -1,0 +1,16 @@
+# Maven
+backend/target/
+backend/*.log
+
+# Evolution API
+shell-evolution-api/.env
+shell-evolution-api/evolution_instances/
+shell-evolution-api/evolution_store/
+shell-evolution-api/postgres_data/
+shell-evolution-api/evolution_redis/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
