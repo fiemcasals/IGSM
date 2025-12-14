@@ -10,6 +10,9 @@ public class UserSessionService {
     // Map<RemoteJid, CurrentState>
     private final Map<String, String> userStates = new ConcurrentHashMap<>();
 
+    // Map<RemoteJid, Map<Key, Value>>
+    private final Map<String, Map<String, String>> userSessionData = new ConcurrentHashMap<>();
+
     public String getUserState(String remoteJid) {
         return userStates.getOrDefault(remoteJid, "NONE");
     }
@@ -20,5 +23,14 @@ public class UserSessionService {
 
     public void clearUserState(String remoteJid) {
         userStates.remove(remoteJid);
+        userSessionData.remove(remoteJid);
+    }
+
+    public void putSessionData(String remoteJid, String key, String value) {
+        userSessionData.computeIfAbsent(remoteJid, k -> new ConcurrentHashMap<>()).put(key, value);
+    }
+
+    public String getSessionData(String remoteJid, String key) {
+        return userSessionData.getOrDefault(remoteJid, new ConcurrentHashMap<>()).get(key);
     }
 }

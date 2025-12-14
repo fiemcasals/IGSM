@@ -7,7 +7,8 @@ API_KEY="api_key" # Default from .env
 # WEBHOOK_URL="https://YOUR_NGROK_URL.ngrok-free.app/api/webhook/evolution"
 # OR if using local network:
 # WEBHOOK_URL="http://host.docker.internal:8081/api/webhook/evolution"
-WEBHOOK_URL="http://192.168.18.110:8081/api/webhook/evolution"
+CURRENT_IP=$(hostname -I | awk '{print $1}')
+WEBHOOK_URL="http://$CURRENT_IP:8081/api/webhook/evolution"
 
 echo "Configuring Webhook for instance: $INSTANCE"
 echo "Target URL: $WEBHOOK_URL"
