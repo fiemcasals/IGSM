@@ -1,0 +1,76 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+const Dashboard = () => {
+    const [stats, setStats] = useState({ inquiries: [], subscriptions: [] });
+
+    useEffect(() => {
+        axios.get('/api/stats')
+            .then(res => setStats(res.data))
+            .catch(err => console.error(err));
+    }, []);
+
+    return (
+        <div className="p-6">
+            <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white p-4 rounded-lg shadow">
+                    <h2 className="text-xl font-semibold mb-4">Consultas por Diplomatura</h2>
+                    <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={stats.inquiries}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    dataKey="count"
+                                >
+                                    {stats.inquiries.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-lg shadow">
+                    <h2 className="text-xl font-semibold mb-4">Inscripciones por Diplomatura</h2>
+                    <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={stats.subscriptions}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    outerRadius={80}
+                                    fill="#82ca9d"
+                                    dataKey="count"
+                                >
+                                    {stats.subscriptions.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Dashboard;

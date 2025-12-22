@@ -2,13 +2,18 @@ package com.igsm.chatbot.controller;
 
 import com.igsm.chatbot.service.EvolutionApiService;
 import com.igsm.chatbot.service.UserSessionService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/webhook")
 public class WebhookController {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebhookController.class);
 
     @Autowired
     private EvolutionApiService evolutionApiService;
@@ -16,11 +21,22 @@ public class WebhookController {
     @Autowired
     private UserSessionService userSessionService;
 
+    @Autowired
+    private com.igsm.chatbot.repository.DiplomaturaRepository diplomaturaRepository;
+
+    @Autowired
+    private com.igsm.chatbot.repository.InquiryRepository inquiryRepository;
+
+    @Autowired
+    private com.igsm.chatbot.repository.SubscriptionRepository subscriptionRepository;
+
     @PostMapping("/evolution")
     public void receiveMessage(@RequestBody Map<String, Object> payload) {
         try {
+            logger.debug("📥 Full Webhook Payload: {}", payload);
             String eventType = (String) payload.get("event");
-            System.out.println("🔔 Webhook received. Event: " + eventType);
+            logger.info("🔔 Webhook received. Event: {}", eventType);
+
             if ("messages.upsert".equals(eventType)) {
                 Map<String, Object> data = (Map<String, Object>) payload.get("data");
                 Map<String, Object> key = (Map<String, Object>) data.get("key");
@@ -28,11 +44,8 @@ public class WebhookController {
 
                 Object fromMeObj = key.get("fromMe");
                 boolean fromMe = fromMeObj instanceof Boolean && (Boolean) fromMeObj;
-                if (fromMe)
-                    return;
 
-                System.out.println("📩 New Message from: " + remoteJid);
-                System.out.println("   FromMe: " + fromMe);
+                logger.info("📩 New Message from: {}, fromMe: {}", remoteJid, fromMe);
 
                 Map<String, Object> message = (Map<String, Object>) data.get("message");
                 String text = "";
@@ -46,14 +59,30 @@ public class WebhookController {
                 }
 
                 if (text == null) {
-                    System.out.println("⚠️ Text is null, ignoring.");
+                    logger.warn("⚠️ Text is null, ignoring message from {}", remoteJid);
                     return;
                 }
                 text = text.trim();
-                System.out.println("   Text: " + text);
+                logger.info("   Text: {}", text);
+
+                if (fromMe) {
+                    if (text.equalsIgnoreCase("INFO")) {
+                        logger.info("🔔 Admin Trigger: 'INFO' sent by me. Triggering menu for {}", remoteJid);
+                    } else {
+                        logger.debug("   Ignoring message sent by me: {}", text);
+                        return; // Ignore other messages from me
+                    }
+                }
+
+                // Ignore Group Messages
+                if (remoteJid.endsWith("@g.us")) {
+                    logger.info("🔇 Ignoring Group Message from: {}", remoteJid);
+                    return;
+                }
 
                 // Global Exit
-                if (text.equalsIgnoreCase("GRACIAS") || text.equals("9")) {
+                if (text.equalsIgnoreCase("GRACIAS") || text.equals("99")) {
+                    logger.info("   Global Exit triggered by {}", remoteJid);
                     userSessionService.clearUserState(remoteJid);
                     evolutionApiService.sendTextMessage(remoteJid,
                             "👋 ¡Hasta luego! Gracias por contactarte con el IGSM.");
@@ -61,12 +90,11 @@ public class WebhookController {
                 }
 
                 String currentState = userSessionService.getUserState(remoteJid);
-                System.out.println("   Current State: " + currentState);
+                logger.info("   Current State for {}: {}", remoteJid, currentState);
 
                 // Global Start / Reset
-                // Global Start / Reset
                 if (text.equalsIgnoreCase("INFO") || text.equals("0")) {
-                    System.out.println("   Matched INFO or 0. Showing Main Menu.");
+                    logger.info("   Matched INFO or 0. Showing Main Menu to {}", remoteJid);
                     showMainMenu(remoteJid);
                     return;
                 }
@@ -81,18 +109,22 @@ public class WebhookController {
                 if ("WAITING_POST_DIPLO_ACTION".equals(currentState)) {
                     if (text.equals("1")) {
                         // Pre-inscribirse
+                        logger.info("   User {} chose Pre-registration", remoteJid);
                         userSessionService.setUserState(remoteJid, "WAITING_PRE_REG_NAME");
                         evolutionApiService.sendTextMessage(remoteJid,
                                 "📝 *Pre-inscripción*\n\nPor favor, ingrese su *Nombre*:");
                     } else if (text.equals("2")) {
                         // Volver al menu
+                        logger.info("   User {} chose Back to Menu", remoteJid);
                         showMainMenu(remoteJid);
                     } else if (text.equals("3")) {
                         // Finalizar
+                        logger.info("   User {} chose Finish", remoteJid);
                         userSessionService.clearUserState(remoteJid);
                         evolutionApiService.sendTextMessage(remoteJid,
                                 "👋 ¡Hasta luego! Gracias por contactarte con el IGSM.");
                     } else {
+                        logger.warn("   User {} sent invalid option in WAITING_POST_DIPLO_ACTION: {}", remoteJid, text);
                         evolutionApiService.sendTextMessage(remoteJid,
                                 "⚠️ Opción no válida.\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
                     }
@@ -141,7 +173,23 @@ public class WebhookController {
                     userSessionService.putSessionData(remoteJid, "phone", text);
 
                     // Finalize Pre-registration
-                    String diplo = userSessionService.getSessionData(remoteJid, "current_diplo");
+                    String diploIdStr = userSessionService.getSessionData(remoteJid, "current_diplo_id");
+                    String diploName = userSessionService.getSessionData(remoteJid, "current_diplo_name");
+
+                    // Log Subscription
+                    try {
+                        Long diploId = Long.parseLong(diploIdStr);
+                        com.igsm.chatbot.model.Diplomatura d = diplomaturaRepository.findById(diploId).orElse(null);
+                        if (d != null) {
+                            com.igsm.chatbot.model.Subscription sub = new com.igsm.chatbot.model.Subscription();
+                            sub.setDiplomatura(d);
+                            sub.setUserId(remoteJid);
+                            subscriptionRepository.save(sub);
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error saving subscription: {}", e.getMessage(), e);
+                    }
+
                     String name = userSessionService.getSessionData(remoteJid, "name");
                     String surname = userSessionService.getSessionData(remoteJid, "surname");
                     String dni = userSessionService.getSessionData(remoteJid, "dni");
@@ -149,19 +197,19 @@ public class WebhookController {
                     String edu = userSessionService.getSessionData(remoteJid, "education");
                     String phone = userSessionService.getSessionData(remoteJid, "phone");
 
-                    System.out.println("✅ NEW PRE-REGISTRATION:");
-                    System.out.println("Diplo: " + diplo);
-                    System.out.println("Name: " + name);
-                    System.out.println("Surname: " + surname);
-                    System.out.println("DNI: " + dni);
-                    System.out.println("Mail: " + mail);
-                    System.out.println("Edu: " + edu);
-                    System.out.println("Phone: " + phone);
+                    logger.info("✅ NEW PRE-REGISTRATION:");
+                    logger.info("Diplo: {}", diploName);
+                    logger.info("Name: {}", name);
+                    logger.info("Surname: {}", surname);
+                    logger.info("DNI: {}", dni);
+                    logger.info("Mail: {}", mail);
+                    logger.info("Edu: {}", edu);
+                    logger.info("Phone: {}", phone);
 
                     userSessionService.setUserState(remoteJid, "WAITING_FINAL_DECISION");
                     evolutionApiService.sendTextMessage(remoteJid,
                             "✅ *¡Datos registrados correctamente!*\n\n" +
-                                    "Hemos recibido su pre-inscripción para la *" + diplo + "*.\n" +
+                                    "Hemos recibido su pre-inscripción para la *" + diploName + "*.\n" +
                                     "Nos pondremos en contacto con usted a la brevedad.\n\n" +
                                     "1. Volver al Menú Principal\n" +
                                     "2. Finalizar");
@@ -179,151 +227,69 @@ public class WebhookController {
                     return;
                 }
 
-                // Default / Fallback (if no state or unknown input, treat as new session
-                // request or show help)
-                // For now, if no state, assume they want to start
+                // Default / Fallback
                 if (currentState == null || currentState.isEmpty() || "NONE".equals(currentState)) {
-                    System.out.println("   No active state. Defaulting to Main Menu.");
-                    showMainMenu(remoteJid);
+                    logger.info("   No active state. Ignoring message to allow free chat.");
+                    return;
                 }
 
             }
         } catch (Exception e) {
-            System.err.println("⚠️ Error parsing webhook: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("⚠️ Error parsing webhook: {}", e.getMessage(), e);
         }
     }
 
     private void showMainMenu(String remoteJid) {
         userSessionService.setUserState(remoteJid, "WAITING_DIPLO_SELECTION");
-        String menu = "🏛️ *Bienvenido al Asistente Virtual del IGSM* 🏛️\n\n" +
-                "Por favor, seleccione el número de la diplomatura de su interés:\n\n" +
-                "1. DESARROLLO WEB\n" +
-                "2. ENERGÍAS RENOVABLES\n" +
-                "3. MOLDES Y MATRICES\n" +
-                "4. HIDROCARBUROS\n" +
-                "5. DISEÑO E IMPRESIÓN 3D\n" +
-                "6. BROMATOLOGÍA\n" +
-                "7. AGRICULTURA DE PRECISIÓN\n" +
-                "8. TECNOLOGÍA AGROPECUARIA\n" +
-                "9. DESARROLLO DE SOFTWARE\n" +
-                "10. ROBÓTICA\n" +
-                "11. MEDIO AMBIENTE";
-        evolutionApiService.sendTextMessage(remoteJid, menu);
+        StringBuilder menu = new StringBuilder(
+                "🏛️ *Bienvenido al Asistente Virtual del Instituto Superior General San Martin - Universidad Tecnológica Nacional Sede de Extension Aulica SAG* 🏛️\n\n"
+                        +
+                        "Por favor, seleccione el número de la carrera o curso de su interés:\n\n");
+
+        List<com.igsm.chatbot.model.Diplomatura> diplos = diplomaturaRepository.findAll();
+        // Sort by ID to maintain consistent order
+        diplos.sort((d1, d2) -> d1.getId().compareTo(d2.getId()));
+
+        for (int i = 0; i < diplos.size(); i++) {
+            menu.append((i + 1)).append(". ").append(diplos.get(i).getName()).append("\n");
+        }
+        menu.append((diplos.size() + 1)).append(". FINALIZAR CONVERSACIÓN");
+
+        evolutionApiService.sendTextMessage(remoteJid, menu.toString());
     }
 
     private void handleDiploSelection(String remoteJid, String text) {
-        String response = "";
-        String diploName = "";
+        List<com.igsm.chatbot.model.Diplomatura> diplos = diplomaturaRepository.findAll();
+        diplos.sort((d1, d2) -> d1.getId().compareTo(d2.getId()));
 
-        switch (text) {
-            case "1":
-                diploName = "Diplomatura en Desarrollo Web";
-                response = "🌐 *DESARROLLO WEB*\n\n" +
-                        "🎯 *Objetivo:* Formar especialistas en soluciones web con tecnologías de vanguardia.\n" +
-                        "📋 *Requisitos:* Título/certificación nivel secundario. Manejo básico de Windows e Internet. Conexión Wi-Fi, PC/tablet/smartphone (no > 5 años).\n"
-                        +
-                        "⏱️ *Duración:* 280 horas reloj (aprox. 7 meses).\n" +
-                        "📚 *Contenidos Clave:* HTML, CSS, JavaScript, React, Base de Datos (SQL/NoSQL), Node.js/MongoDB, Diseño UX/UI, Proyecto Final.";
-                break;
-            case "2":
-                diploName = "Diplomatura en Energías Renovables";
-                response = "☀️ *ENERGÍAS RENOVABLES*\n\n" +
-                        "🎯 *Objetivo:* Formación científico-tecnológica para la inserción laboral en el sector de energías renovables.\n"
-                        +
-                        "📋 *Requisitos:* Título/certificación nivel secundario.\n" +
-                        "⏱️ *Duración:* 128 horas (Módulos principales).\n" +
-                        "📚 *Contenidos Clave:* Fundamentos (Sistemas Eléctricos), Biomasa y Biocombustibles, Tecnología Solar Fotovoltaica y Térmica, Energía Eólica, Gestión de la Energía.";
-                break;
-            case "3":
-                diploName = "Diplomatura en Moldes y Matrices";
-                response = "⚙️ *MOLDES Y MATRICES*\n\n" +
-                        "🎯 *Objetivo:* Construir, desarrollar y evaluar moldes, matrices y dispositivos para la industria metalmecánica.\n"
-                        +
-                        "📋 *Requisitos:* Título/certificación nivel secundario.\n" +
-                        "⏱️ *Duración:* 6 módulos (48 horas c/u).\n" +
-                        "📚 *Contenidos Clave:* Dibujo Técnico (CAD), Moldes de Inyección y Soplado, Diseño de Matrices, Tratamientos Térmicos, Metrología.";
-                break;
-            case "4":
-                diploName = "Diplomatura en Hidrocarburos";
-                response = "🛢️ *HIDROCARBUROS*\n\n" +
-                        "🎯 *Objetivo:* Introducción integral al sector, desde exploración hasta producción, aspectos técnicos y ambientales.\n"
-                        +
-                        "📋 *Requisitos:* Título/certificación nivel secundario.\n" +
-                        "⏱️ *Duración:* 5 módulos (48 horas c/u).\n" +
-                        "📚 *Contenidos Clave:* Geología del Petróleo, Perforación, Producción y Transporte, Refinación y Petroquímica, Seguridad y Gestión Ambiental.";
-                break;
-            case "5":
-                diploName = "Diplomatura en Diseño e Impresión 3D";
-                response = "🖨️ *DISEÑO E IMPRESIÓN 3D*\n\n" +
-                        "🎯 *Objetivo:* Modelado 3D de componentes y conjuntos utilizando software profesional.\n" +
-                        "📋 *Requisitos:* Título/certificación nivel secundario. Conocimiento básico de dibujo técnico.\n"
-                        +
-                        "⏱️ *Duración:* 6 módulos (48 horas c/u).\n" +
-                        "📚 *Contenidos Clave:* Modelado con Solid Edge v20, Diseño de piezas, Dibujo 2D, Tecnologías de Impresión 3D (FDM, SLA), Slicing.";
-                break;
-            case "6":
-                diploName = "Diplomatura en Bromatología";
-                response = "🍎 *BROMATOLOGÍA*\n\n" +
-                        "🎯 *Objetivo:* Garantizar seguridad, calidad e inocuidad en la industria alimentaria.\n" +
-                        "📋 *Requisitos:* Título/certificación nivel secundario.\n" +
-                        "⏱️ *Duración:* 6 módulos (48 horas c/u).\n" +
-                        "📚 *Contenidos Clave:* Química de Alimentos, Microbiología, Bromatología y Nutrición, Controles de Calidad, Normativas (HACCP, ISO 22000).";
-                break;
-            case "7":
-                diploName = "Diplomatura en Agricultura de Precisión";
-                response = "🛰️ *AGRICULTURA DE PRECISIÓN*\n\n" +
-                        "🎯 *Objetivo:* Aplicar tecnologías avanzadas (TIC) para optimizar recursos y productividad agropecuaria.\n"
-                        +
-                        "📋 *Requisitos:* Título/certificación nivel secundario.\n" +
-                        "⏱️ *Duración:* 290 horas reloj (aprox. 7 meses).\n" +
-                        "📚 *Contenidos Clave:* SIG, Sensores Remotos (drones), Big Data, Trazabilidad, Monitoreo de cultivos, Maquinaria de Dosis Variable.";
-                break;
-            case "8":
-                diploName = "Diplomatura en Tecnología Agropecuaria";
-                response = "🚜 *TECNOLOGÍA AGROPECUARIA*\n\n" +
-                        "🎯 *Objetivo:* Aplicar robótica y automatización para mejorar productividad y sostenibilidad agrícola.\n"
-                        +
-                        "📋 *Requisitos:* Título/certificación nivel secundario.\n" +
-                        "⏱️ *Duración:* 5 módulos (48 horas c/u).\n" +
-                        "📚 *Contenidos Clave:* Robótica Agrícola, Sistemas de Control, Agricultura de Precisión, Electrónica e Instrumentación, IoT en el Agro.";
-                break;
-            case "9":
-                diploName = "Diplomatura en Desarrollo de Software";
-                response = "💻 *DESARROLLO DE SOFTWARE*\n\n" +
-                        "🎯 *Objetivo:* Formación práctica en desarrollo de software, estructuras de datos y algoritmos.\n"
-                        +
-                        "📋 *Requisitos:* Título/certificación nivel secundario.\n" +
-                        "⏱️ *Duración:* 384 horas (8 módulos de 48hs).\n" +
-                        "📚 *Contenidos Clave:* POO, Estructuras de Datos, Lenguajes (Java, Python), SQL, Sistemas Operativos y Redes.";
-                break;
-            case "10":
-                diploName = "Diplomatura en Robótica";
-                response = "🤖 *ROBÓTICA*\n\n" +
-                        "🎯 *Objetivo:* Diseño, programación e implementación de sistemas robóticos y automatización.\n"
-                        +
-                        "📋 *Requisitos:* Título/certificación nivel secundario.\n" +
-                        "⏱️ *Duración:* 6 módulos (48 horas c/u).\n" +
-                        "📚 *Contenidos Clave:* Robótica y Mecánica, Programación (C++, Python, ROS), Electrónica y Sensores, Diseño y Simulación (CAD), Automatización.";
-                break;
-            case "11":
-                diploName = "Diplomatura en Medio Ambiente";
-                response = "🌍 *MEDIO AMBIENTE*\n\n" +
-                        "🎯 *Objetivo:* Detectar y diagnosticar problemas ambientales, preservación sustentable de recursos.\n"
-                        +
-                        "📋 *Requisitos:* Secundario completo.\n" +
-                        "⏱️ *Duración:* 10 meses / 304 horas reloj.\n" +
-                        "📚 *Contenidos Clave:* Ciencias de la Tierra, EIA, Normativa Ambiental, Sistemas de Gestión Ambiental, Energía y Medio Ambiente.";
-                break;
-            default:
+        try {
+            int selection = Integer.parseInt(text);
+            if (selection >= 1 && selection <= diplos.size()) {
+                com.igsm.chatbot.model.Diplomatura selectedDiplo = diplos.get(selection - 1);
+
+                // Log Inquiry
+                com.igsm.chatbot.model.Inquiry inquiry = new com.igsm.chatbot.model.Inquiry();
+                inquiry.setDiplomatura(selectedDiplo);
+                inquiryRepository.save(inquiry);
+
+                userSessionService.putSessionData(remoteJid, "current_diplo_id", String.valueOf(selectedDiplo.getId()));
+                userSessionService.putSessionData(remoteJid, "current_diplo_name", selectedDiplo.getName());
+                userSessionService.setUserState(remoteJid, "WAITING_POST_DIPLO_ACTION");
+
                 evolutionApiService.sendTextMessage(remoteJid,
-                        "⚠️ Opción no válida. Por favor, ingrese un número del 1 al 11.");
-                return;
+                        selectedDiplo.getContent()
+                                + "\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
+            } else if (selection == diplos.size() + 1) {
+                userSessionService.clearUserState(remoteJid);
+                evolutionApiService.sendTextMessage(remoteJid,
+                        "👋 ¡Hasta luego! Gracias por contactarte con el IGSM.");
+            } else {
+                evolutionApiService.sendTextMessage(remoteJid,
+                        "⚠️ Opción no válida. Por favor, ingrese un número del 1 al " + (diplos.size() + 1) + ".");
+            }
+        } catch (NumberFormatException e) {
+            evolutionApiService.sendTextMessage(remoteJid,
+                    "⚠️ Opción no válida. Por favor, ingrese un número válido.");
         }
-
-        userSessionService.putSessionData(remoteJid, "current_diplo", diploName);
-        userSessionService.setUserState(remoteJid, "WAITING_POST_DIPLO_ACTION");
-        evolutionApiService.sendTextMessage(remoteJid,
-                response + "\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
     }
 }

@@ -1,5 +1,7 @@
 package com.igsm.chatbot.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -11,6 +13,8 @@ import java.util.HashMap;
 
 @Service
 public class EvolutionApiService {
+
+    private static final Logger logger = LoggerFactory.getLogger(EvolutionApiService.class);
 
     @Value("${evolution.api.url}")
     private String apiUrl;
@@ -30,6 +34,8 @@ public class EvolutionApiService {
             // Extract number from remoteJid (remove @s.whatsapp.net or @lid)
             String number = remoteJid.split("@")[0];
 
+            logger.info("📤 Sending message to {}: {}", number, text);
+
             Map<String, Object> body = new HashMap<>();
             body.put("number", number);
             body.put("text", text);
@@ -41,10 +47,10 @@ public class EvolutionApiService {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
             restTemplate.postForEntity(url, request, String.class);
-            System.out.println("📤 Reply sent to " + number);
+            logger.info("✅ Message sent successfully to {}", number);
 
         } catch (Exception e) {
-            System.err.println("❌ Error sending message: " + e.getMessage());
+            logger.error("❌ Error sending message to {}: {}", remoteJid, e.getMessage(), e);
         }
     }
 }

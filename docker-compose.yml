@@ -1,17 +1,18 @@
 services:
   evolution_api:
-    container_name: igsm_evolution_api
+    container_name: igsm-evolution-api-v2
     image: evoapicloud/evolution-api:latest
     restart: always
     depends_on:
       - redis
       - postgres
     ports:
-      - "${EVOLUTION_API_PORT:-8080}:8080"
+      - "8089:8080"
     volumes:
       - evolution_instances:/evolution/instances
     networks:
       - evolution-net
+      - net-proxy
     env_file:
       - .env
     environment:
@@ -25,30 +26,28 @@ services:
     restart: always
     networks:
       - evolution-net
-    container_name: igsm_redis
+    container_name: igsm-redis-v2
     command: >
       redis-server --port 6379 --appendonly yes
     volumes:
       - evolution_redis:/data
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-
+  #    ports:
+  #      - "6380:6379"
 
   postgres:
-    container_name: igsm_postgres
+    container_name: igsm-postgres-v2
     image: postgres:15
     networks:
       - evolution-net
-    command:
-      ["postgres", "-c", "max_connections=1000", "-c", "listen_addresses=*"]
+    command: [ "postgres", "-c", "max_connections=1000", "-c", "listen_addresses=*" ]
     restart: always
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "5444:5432"
     env_file:
       - .env
     environment:
       # *** CAMBIO CRÍTICO: PONER LA CONTRASEÑA EN AMBOS LUGARES ***
-      - POSTGRES_USER=user         
+      - POSTGRES_USER=user
       - POSTGRES_PASSWORD=123456
       # POSTGRES_USER y POSTGRES_PASS están en el .env
       - POSTGRES_DB=${POSTGRES_DB:-evolution}
@@ -57,14 +56,54 @@ services:
     expose:
       - 5432
 
+  backend:
+    container_name: igsm-backend-v2
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    #    ports:
+    #      - "8085:8081"
+    environment:
+      - SERVER_PORT=8081
+      - EVOLUTION_API_URL=http://igsm-evolution-api-v2:8080
+      - EVOLUTION_API_INSTANCE=diplo
+      - AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY}
+      - POSTGRES_HOST=igsm-postgres-v2
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-evolution}
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=123456
+    depends_on:
+      - evolution_api
+      - postgres
+    networks:
+      - evolution-net
+      - net-proxy
 
+  frontend:
+    container_name: igsm-frontend-v2
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    #    ports:
+    #      - "3001:80"
+    depends_on:
+      - backend
+    networks:
+      - evolution-net
+      - net-proxy
 
 volumes:
   evolution_instances:
   evolution_redis:
   postgres_data:
 
+
 networks:
   evolution-net:
-    name: evolution-net
+    name: evolution-net-v2
     driver: bridge
+  net-proxy:
+    external: true
