@@ -31,8 +31,9 @@ public class EvolutionApiService {
         try {
             String url = apiUrl + "/message/sendText/" + instance;
 
-            // Extract number from remoteJid (remove @s.whatsapp.net or @lid)
-            String number = remoteJid.split("@")[0];
+            // Extract number from remoteJid (remove @s.whatsapp.net or @lid, and device ID
+            // like :1)
+            String number = remoteJid.split("@")[0].split(":")[0];
 
             logger.info("📤 Sending message to {}: {}", number, text);
 
