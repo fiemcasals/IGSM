@@ -30,6 +30,8 @@ public class Subscription {
     @Column(length = 2000)
     private String fileUrl;
 
+    private String mimeType;
+
     private LocalDateTime timestamp;
 
     @PrePersist

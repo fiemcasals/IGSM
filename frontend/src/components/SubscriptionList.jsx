@@ -24,7 +24,14 @@ const SubscriptionList = () => {
         LICENCIATURA: subscriptions.filter(s => s.diplomaturaType === 'LICENCIATURA'),
     };
 
-    const renderTable = (title, subs) => (
+    const getExtension = (mimeType) => {
+        if (!mimeType) return '';
+        if (mimeType.includes('pdf')) return '.pdf';
+        if (mimeType.includes('image')) return '.jpg'; // Default to jpg for images if unknown
+        return '';
+    };
+
+    const renderTable = (title, subs, showFile = false) => (
         <div className="bg-white p-6 rounded-lg shadow mb-8">
             <h2 className="text-2xl font-bold mb-4 border-b pb-2">{title} ({subs.length})</h2>
             {subs.length === 0 ? (
@@ -39,7 +46,7 @@ const SubscriptionList = () => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DNI</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archivo</th>
+                                {showFile && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Archivo</th>}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -61,20 +68,23 @@ const SubscriptionList = () => {
                                         <div>{sub.mail}</div>
                                         <div>{sub.phone}</div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {sub.fileUrl ? (
-                                            <a
-                                                href={sub.fileUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
-                                            >
-                                                <FileText size={16} /> Ver Archivo
-                                            </a>
-                                        ) : (
-                                            <span className="text-gray-400">-</span>
-                                        )}
-                                    </td>
+                                    {showFile && (
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {sub.fileUrl ? (
+                                                <a
+                                                    href={sub.fileUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    download={`archivo_${sub.dni}${getExtension(sub.mimeType)}`}
+                                                    className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                                                >
+                                                    <FileText size={16} /> Descargar
+                                                </a>
+                                            ) : (
+                                                <span className="text-gray-400">-</span>
+                                            )}
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
@@ -89,7 +99,7 @@ const SubscriptionList = () => {
     return (
         <div className="p-6">
             <h1 className="text-3xl font-bold mb-8">Listado de Inscripciones</h1>
-            {renderTable('Licenciaturas', groupedSubscriptions.LICENCIATURA)}
+            {renderTable('Licenciaturas', groupedSubscriptions.LICENCIATURA, true)}
             {renderTable('Tecnicaturas', groupedSubscriptions.TECNICATURA)}
             {renderTable('Diplomaturas', groupedSubscriptions.DIPLOMATURA)}
         </div>

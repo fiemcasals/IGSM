@@ -96,6 +96,7 @@ public class StatsController {
             map.put("education", sub.getEducation());
             map.put("phone", sub.getPhone());
             map.put("fileUrl", sub.getFileUrl());
+            map.put("mimeType", sub.getMimeType());
             map.put("timestamp", sub.getTimestamp());
             return map;
         }).collect(Collectors.toList());

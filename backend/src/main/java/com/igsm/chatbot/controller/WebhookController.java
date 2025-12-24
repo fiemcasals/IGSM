@@ -176,6 +176,11 @@ public class WebhookController {
                     Long diploId = Long.parseLong(diploIdStr);
                     com.igsm.chatbot.model.Diplomatura d = diplomaturaRepository.findById(diploId).orElse(null);
 
+                    if (d != null) {
+                        logger.info("Checking Diplo Type for Upload: ID={}, Name={}, Type={}", d.getId(), d.getName(),
+                                d.getType());
+                    }
+
                     if (d != null && "LICENCIATURA".equalsIgnoreCase(d.getType())) {
                         userSessionService.setUserState(remoteJid, "WAITING_FILE_UPLOAD");
                         evolutionApiService.sendTextMessage(remoteJid,
@@ -184,12 +189,12 @@ public class WebhookController {
                     }
 
                     // If not Licenciatura, save immediately
-                    saveSubscription(remoteJid, d, null);
+                    saveSubscription(remoteJid, d, null, null);
                     return;
                 }
 
                 if ("WAITING_FILE_UPLOAD".equals(currentState)) {
-                    String fileUrl = null;
+                    String mimeType = null;
 
                     // Check for media
                     Map<String, Object> msg = (Map<String, Object>) ((Map<String, Object>) payload.get("data"))
@@ -197,15 +202,12 @@ public class WebhookController {
                     if (msg != null) {
                         if (msg.containsKey("imageMessage")) {
                             Map<String, Object> img = (Map<String, Object>) msg.get("imageMessage");
-                            fileUrl = (String) img.get("url"); // Or handle base64/mediaKey if needed. Evolution usually
-                                                               // provides url in some contexts or we might need to
-                                                               // download.
-                            // For simplicity/MVP, we'll try to grab the URL provided by Evolution or just a
-                            // placeholder if it's complex media handling.
-                            // Evolution API v2 often sends 'url' in the payload for media.
+                            fileUrl = (String) img.get("url");
+                            mimeType = (String) img.get("mimetype");
                         } else if (msg.containsKey("documentMessage")) {
                             Map<String, Object> doc = (Map<String, Object>) msg.get("documentMessage");
                             fileUrl = (String) doc.get("url");
+                            mimeType = (String) doc.get("mimetype");
                         }
                     }
 
@@ -231,7 +233,7 @@ public class WebhookController {
                     Long diploId = Long.parseLong(diploIdStr);
                     com.igsm.chatbot.model.Diplomatura d = diplomaturaRepository.findById(diploId).orElse(null);
 
-                    saveSubscription(remoteJid, d, fileUrl);
+                    saveSubscription(remoteJid, d, fileUrl, mimeType);
                     return;
                 }
 
@@ -312,7 +314,8 @@ public class WebhookController {
         }
     }
 
-    private void saveSubscription(String remoteJid, com.igsm.chatbot.model.Diplomatura d, String fileUrl) {
+    private void saveSubscription(String remoteJid, com.igsm.chatbot.model.Diplomatura d, String fileUrl,
+            String mimeType) {
         String name = userSessionService.getSessionData(remoteJid, "name");
         String surname = userSessionService.getSessionData(remoteJid, "surname");
         String dni = userSessionService.getSessionData(remoteJid, "dni");
@@ -332,6 +335,7 @@ public class WebhookController {
                 sub.setEducation(edu);
                 sub.setPhone(phone);
                 sub.setFileUrl(fileUrl);
+                sub.setMimeType(mimeType);
                 subscriptionRepository.save(sub);
             }
         } catch (Exception e) {
