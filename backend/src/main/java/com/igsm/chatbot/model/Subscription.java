@@ -20,6 +20,16 @@ public class Subscription {
 
     private String userId; // remoteJid
 
+    private String name;
+    private String surname;
+    private String dni;
+    private String mail;
+    private String education;
+    private String phone;
+
+    @Column(length = 2000)
+    private String fileUrl;
+
     private LocalDateTime timestamp;
 
     @PrePersist

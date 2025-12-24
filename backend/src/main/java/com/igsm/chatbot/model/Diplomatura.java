@@ -17,6 +17,8 @@ public class Diplomatura {
 
     private String name;
 
+    private String type; // DIPLOMATURA, TECNICATURA, LICENCIATURA
+
     @Column(length = 2000)
     private String description;
 

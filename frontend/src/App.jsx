@@ -1,8 +1,9 @@
 import React from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import DiplomaturaList from './components/DiplomaturaList';
+import SubscriptionList from './components/SubscriptionList';
 
 function App() {
     const location = useLocation();
@@ -25,6 +26,10 @@ function App() {
                         <BookOpen size={20} />
                         Diplomaturas
                     </Link>
+                    <Link to="/subscriptions" className={`flex items-center gap-3 p-3 rounded mb-2 hover:bg-blue-700 ${isActive('/subscriptions')}`}>
+                        <Users size={20} />
+                        Inscripciones
+                    </Link>
                 </nav>
             </div>
 
@@ -33,6 +38,7 @@ function App() {
                 <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/diplomaturas" element={<DiplomaturaList />} />
+                    <Route path="/subscriptions" element={<SubscriptionList />} />
                 </Routes>
             </div>
         </div>

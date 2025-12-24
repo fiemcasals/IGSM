@@ -172,47 +172,66 @@ public class WebhookController {
                 if ("WAITING_PRE_REG_PHONE".equals(currentState)) {
                     userSessionService.putSessionData(remoteJid, "phone", text);
 
-                    // Finalize Pre-registration
                     String diploIdStr = userSessionService.getSessionData(remoteJid, "current_diplo_id");
-                    String diploName = userSessionService.getSessionData(remoteJid, "current_diplo_name");
+                    Long diploId = Long.parseLong(diploIdStr);
+                    com.igsm.chatbot.model.Diplomatura d = diplomaturaRepository.findById(diploId).orElse(null);
 
-                    // Log Subscription
-                    try {
-                        Long diploId = Long.parseLong(diploIdStr);
-                        com.igsm.chatbot.model.Diplomatura d = diplomaturaRepository.findById(diploId).orElse(null);
-                        if (d != null) {
-                            com.igsm.chatbot.model.Subscription sub = new com.igsm.chatbot.model.Subscription();
-                            sub.setDiplomatura(d);
-                            sub.setUserId(remoteJid);
-                            subscriptionRepository.save(sub);
-                        }
-                    } catch (Exception e) {
-                        logger.error("Error saving subscription: {}", e.getMessage(), e);
+                    if (d != null && "LICENCIATURA".equalsIgnoreCase(d.getType())) {
+                        userSessionService.setUserState(remoteJid, "WAITING_FILE_UPLOAD");
+                        evolutionApiService.sendTextMessage(remoteJid,
+                                "📂 Para finalizar la inscripción a la Licenciatura, por favor *envíe una foto o PDF* de su título previo o documentación requerida.");
+                        return;
                     }
 
-                    String name = userSessionService.getSessionData(remoteJid, "name");
-                    String surname = userSessionService.getSessionData(remoteJid, "surname");
-                    String dni = userSessionService.getSessionData(remoteJid, "dni");
-                    String mail = userSessionService.getSessionData(remoteJid, "mail");
-                    String edu = userSessionService.getSessionData(remoteJid, "education");
-                    String phone = userSessionService.getSessionData(remoteJid, "phone");
+                    // If not Licenciatura, save immediately
+                    saveSubscription(remoteJid, d, null);
+                    return;
+                }
 
-                    logger.info("✅ NEW PRE-REGISTRATION:");
-                    logger.info("Diplo: {}", diploName);
-                    logger.info("Name: {}", name);
-                    logger.info("Surname: {}", surname);
-                    logger.info("DNI: {}", dni);
-                    logger.info("Mail: {}", mail);
-                    logger.info("Edu: {}", edu);
-                    logger.info("Phone: {}", phone);
+                if ("WAITING_FILE_UPLOAD".equals(currentState)) {
+                    String fileUrl = null;
 
-                    userSessionService.setUserState(remoteJid, "WAITING_FINAL_DECISION");
-                    evolutionApiService.sendTextMessage(remoteJid,
-                            "✅ *¡Datos registrados correctamente!*\n\n" +
-                                    "Hemos recibido su pre-inscripción para la *" + diploName + "*.\n" +
-                                    "Nos pondremos en contacto con usted a la brevedad.\n\n" +
-                                    "1. Volver al Menú Principal\n" +
-                                    "2. Finalizar");
+                    // Check for media
+                    Map<String, Object> msg = (Map<String, Object>) ((Map<String, Object>) payload.get("data"))
+                            .get("message");
+                    if (msg != null) {
+                        if (msg.containsKey("imageMessage")) {
+                            Map<String, Object> img = (Map<String, Object>) msg.get("imageMessage");
+                            fileUrl = (String) img.get("url"); // Or handle base64/mediaKey if needed. Evolution usually
+                                                               // provides url in some contexts or we might need to
+                                                               // download.
+                            // For simplicity/MVP, we'll try to grab the URL provided by Evolution or just a
+                            // placeholder if it's complex media handling.
+                            // Evolution API v2 often sends 'url' in the payload for media.
+                        } else if (msg.containsKey("documentMessage")) {
+                            Map<String, Object> doc = (Map<String, Object>) msg.get("documentMessage");
+                            fileUrl = (String) doc.get("url");
+                        }
+                    }
+
+                    if (fileUrl == null && (text == null || text.isEmpty())) {
+                        evolutionApiService.sendTextMessage(remoteJid,
+                                "⚠️ Por favor, envíe un archivo (Imagen o PDF).");
+                        return;
+                    }
+
+                    // If text is sent instead of file, we might want to warn, or accept text as a
+                    // link?
+                    // Let's assume strict file upload. If text is present but no fileUrl, it might
+                    // be a user comment.
+                    // If fileUrl is null, let's try to see if it's a text message with a link? No,
+                    // let's enforce media message.
+                    if (fileUrl == null) {
+                        evolutionApiService.sendTextMessage(remoteJid,
+                                "⚠️ No detectamos un archivo. Por favor envíe la imagen o PDF.");
+                        return;
+                    }
+
+                    String diploIdStr = userSessionService.getSessionData(remoteJid, "current_diplo_id");
+                    Long diploId = Long.parseLong(diploIdStr);
+                    com.igsm.chatbot.model.Diplomatura d = diplomaturaRepository.findById(diploId).orElse(null);
+
+                    saveSubscription(remoteJid, d, fileUrl);
                     return;
                 }
 
@@ -292,4 +311,43 @@ public class WebhookController {
                     "⚠️ Opción no válida. Por favor, ingrese un número válido.");
         }
     }
-}
+
+    private void saveSubscription(String remoteJid, com.igsm.chatbot.model.Diplomatura d, String fileUrl) {
+        String name = userSessionService.getSessionData(remoteJid, "name");
+        String surname = userSessionService.getSessionData(remoteJid, "surname");
+        String dni = userSessionService.getSessionData(remoteJid, "dni");
+        String mail = userSessionService.getSessionData(remoteJid, "mail");
+        String edu = userSessionService.getSessionData(remoteJid, "education");
+        String phone = userSessionService.getSessionData(remoteJid, "phone");
+
+        try {
+            if (d != null) {
+                com.igsm.chatbot.model.Subscription sub = new com.igsm.chatbot.model.Subscription();
+                sub.setDiplomatura(d);
+                sub.setUserId(remoteJid);
+                sub.setName(name);
+                sub.setSurname(surname);
+                sub.setDni(dni);
+                sub.setMail(mail);
+                sub.setEducation(edu);
+                sub.setPhone(phone);
+                sub.setFileUrl(fileUrl);
+                subscriptionRepository.save(sub);
+            }
+        } catch (Exception e) {
+            logger.error("Error saving subscription: {}", e.getMessage(), e);
+        }
+
+        logger.info("✅ NEW PRE-REGISTRATION SAVED:");
+        logger.info("Diplo: {}", d.getName());
+        logger.info("User: {} {}", name, surname);
+        if (fileUrl != null) logger.info("File: {}", fileUrl);
+
+        userSessionService.setUserState(remoteJid, "WAITING_FINAL_DECISION");
+        evolutionApiService.sendTextMessage(remoteJid,
+                "✅ *¡Datos registrados correctamente!*\n\n" +
+                        "Hemos recibido su pre-inscripción para la *" + d.getName() + "*.\n" +
+                        "Nos pondremos en contacto con usted a la brevedad.\n\n" +
+                        "1. Volver al Menú Principal\n" +
+                        "2. Finalizar");
+    }

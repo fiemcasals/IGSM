@@ -78,4 +78,26 @@ public class StatsController {
                 .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
                 .body(csv.toString());
     }
+
+    @GetMapping("/subscriptions")
+    public List<Map<String, Object>> getSubscriptions() {
+        return subscriptionRepository.findAll().stream().map(sub -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", sub.getId());
+            if (sub.getDiplomatura() != null) {
+                map.put("diplomaturaName", sub.getDiplomatura().getName());
+                map.put("diplomaturaType", sub.getDiplomatura().getType());
+            }
+            map.put("userId", sub.getUserId());
+            map.put("name", sub.getName());
+            map.put("surname", sub.getSurname());
+            map.put("dni", sub.getDni());
+            map.put("mail", sub.getMail());
+            map.put("education", sub.getEducation());
+            map.put("phone", sub.getPhone());
+            map.put("fileUrl", sub.getFileUrl());
+            map.put("timestamp", sub.getTimestamp());
+            return map;
+        }).collect(Collectors.toList());
+    }
 }
