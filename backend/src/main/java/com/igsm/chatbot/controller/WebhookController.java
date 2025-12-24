@@ -195,6 +195,7 @@ public class WebhookController {
 
                 if ("WAITING_FILE_UPLOAD".equals(currentState)) {
                     String mimeType = null;
+                    String fileUrl = null;
 
                     // Check for media
                     Map<String, Object> msg = (Map<String, Object>) ((Map<String, Object>) payload.get("data"))
