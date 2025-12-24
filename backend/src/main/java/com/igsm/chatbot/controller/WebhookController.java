@@ -341,7 +341,8 @@ public class WebhookController {
         logger.info("✅ NEW PRE-REGISTRATION SAVED:");
         logger.info("Diplo: {}", d.getName());
         logger.info("User: {} {}", name, surname);
-        if (fileUrl != null) logger.info("File: {}", fileUrl);
+        if (fileUrl != null)
+            logger.info("File: {}", fileUrl);
 
         userSessionService.setUserState(remoteJid, "WAITING_FINAL_DECISION");
         evolutionApiService.sendTextMessage(remoteJid,
@@ -351,3 +352,4 @@ public class WebhookController {
                         "1. Volver al Menú Principal\n" +
                         "2. Finalizar");
     }
+}
