@@ -12,6 +12,24 @@ public class DataInitializer {
         @Bean
         CommandLineRunner initDatabase(DiplomaturaRepository repository) {
                 return args -> {
+                        // --- CLEANUP OLD ENTRIES ---
+                        // Remove old entries that were renamed or are no longer needed to avoid
+                        // duplicates
+                        deleteDiploIfExists(repository,
+                                        "PROFESORADO EN DOCENCIA SUPERIOR/ PROFESORADO EN DISCIPLINAS INDUSTRIALES");
+                        deleteDiploIfExists(repository, "DESARROLLO WEB");
+                        deleteDiploIfExists(repository, "ENERGÍAS RENOVABLES");
+                        deleteDiploIfExists(repository, "MOLDES Y MATRICES");
+                        deleteDiploIfExists(repository, "HIDROCARBUROS");
+                        deleteDiploIfExists(repository, "DISEÑO E IMPRESIÓN 3D");
+                        deleteDiploIfExists(repository, "BROMATOLOGÍA");
+                        deleteDiploIfExists(repository, "AGRICULTURA DE PRECISIÓN");
+                        deleteDiploIfExists(repository, "TECNOLOGÍA AGROPECUARIA");
+                        deleteDiploIfExists(repository, "DESARROLLO DE SOFTWARE");
+                        deleteDiploIfExists(repository, "ROBÓTICA");
+                        deleteDiploIfExists(repository, "MEDIO AMBIENTE");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN PRODUCTOS ALIMENTICIOS");
+
                         // --- CARRERAS ---
 
                         createOrUpdateDiplo(repository, "PROFESORADO EN DOCENCIA SUPERIOR",
@@ -368,5 +386,10 @@ public class DataInitializer {
                 }
 
                 repo.save(d);
+        }
+
+        private void deleteDiploIfExists(DiplomaturaRepository repo, String name) {
+                java.util.List<Diplomatura> existing = repo.findAll();
+                existing.stream().filter(d -> d.getName().equals(name)).findFirst().ifPresent(repo::delete);
         }
 }
