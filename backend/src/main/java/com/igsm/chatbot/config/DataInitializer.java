@@ -12,76 +12,324 @@ public class DataInitializer {
         @Bean
         CommandLineRunner initDatabase(DiplomaturaRepository repository) {
                 return args -> {
-                        // Always try to create/update these diplomaturas
-                        createOrUpdateDiplo(repository, "DESARROLLO WEB", "Formar especialistas en soluciones web.",
-                                        "🌐 *DESARROLLO WEB*\n\n🎯 *Objetivo:* Formar especialistas en soluciones web con tecnologías de vanguardia.\n📋 *Requisitos:* Título/certificación nivel secundario. Manejo básico de Windows e Internet. Conexión Wi-Fi, PC/tablet/smartphone (no > 5 años).\n⏱️ *Duración:* 280 horas reloj (aprox. 7 meses).\n📚 *Contenidos Clave:* HTML, CSS, JavaScript, React, Base de Datos (SQL/NoSQL), Node.js/MongoDB, Diseño UX/UI, Proyecto Final.");
+                        // --- CARRERAS ---
 
-                        createOrUpdateDiplo(repository, "ENERGÍAS RENOVABLES",
-                                        "Formación científico-tecnológica en energías renovables.",
-                                        "☀️ *ENERGÍAS RENOVABLES*\n\n🎯 *Objetivo:* Formación científico-tecnológica para la inserción laboral en el sector de energías renovables.\n📋 *Requisitos:* Título/certificación nivel secundario.\n⏱️ *Duración:* 128 horas (Módulos principales).\n📚 *Contenidos Clave:* Fundamentos (Sistemas Eléctricos), Biomasa y Biocombustibles, Tecnología Solar Fotovoltaica y Térmica, Energía Eólica, Gestión de la Energía.");
+                        createOrUpdateDiplo(repository, "PROFESORADO EN DOCENCIA SUPERIOR",
+                                        "Ciclo de complementación pedagógica curricular.",
+                                        "👨‍🏫 *PROFESORADO EN DOCENCIA SUPERIOR*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Ciclo de complementación pedagógica curricular. Conforme la Resolución N° 12767/97, el título que se otorga, habilita ingresar al sistema educativo público de la Provincia de Buenos Aires, facultando a los inscriptos/as a tomar cargos/módulos y/o horas cátedra en las instituciones educativas bonaerenses. Permite el ejercicio de la docencia en el listado oficial o 108A.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Poseer título de educación superior emitido por una institución educativa reconocida oficialmente que certifique el egreso de una carrera cuya trayectoria formativa conste de una carga horaria mínima de mil ochocientas (1.800) horas reloj y dos y medio (2 1/2) años de duración (mínimo).\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 20 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial: 1 sábado presencial al mes, el resto de las actividades es mediante campus virtual en modalidad asincrónica.\n"
+                                                        +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 (hasta el 31/01/2026)\n"
+                                                        +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "MOLDES Y MATRICES", "Construcción de moldes y matrices.",
-                                        "⚙️ *MOLDES Y MATRICES*\n\n🎯 *Objetivo:* Construir, desarrollar y evaluar moldes, matrices y dispositivos para la industria metalmecánica.\n📋 *Requisitos:* Título/certificación nivel secundario.\n⏱️ *Duración:* 6 módulos (48 horas c/u).\n📚 *Contenidos Clave:* Dibujo Técnico (CAD), Moldes de Inyección y Soplado, Diseño de Matrices, Tratamientos Térmicos, Metrología.");
+                        createOrUpdateDiplo(repository, "TECNICATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO",
+                                        "Tecnicatura en Higiene y Seguridad.",
+                                        "👷 *TECNICATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* \n" +
+                                                        "📋 *Requisitos:* Título secundario completo\n" +
+                                                        "🎓 *Certificación:* ISM\n" +
+                                                        "⏱️ *Duración:* 3 años\n" +
+                                                        "📚 *Modalidad:* Presencial.\n" +
+                                                        "📌 *Matrícula de Inscripción:* $115.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "HIDROCARBUROS",
-                                        "Introducción integral al sector de hidrocarburos.",
-                                        "🛢️ *HIDROCARBUROS*\n\n🎯 *Objetivo:* Introducción integral al sector, desde exploración hasta producción, aspectos técnicos y ambientales.\n📋 *Requisitos:* Título/certificación nivel secundario.\n⏱️ *Duración:* 5 módulos (48 horas c/u).\n📚 *Contenidos Clave:* Geología del Petróleo, Perforación, Producción y Transporte, Refinación y Petroquímica, Seguridad y Gestión Ambiental.");
+                        createOrUpdateDiplo(repository, "TECNICATURA EN ADMINISTRACION CON ORIENTACION EN MARKETING",
+                                        "Tecnicatura en Administración y Marketing.",
+                                        "📈 *TECNICATURA EN ADMINISTRACION CON ORIENTACION EN MARKETING*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* \n" +
+                                                        "📋 *Requisitos:* Título secundario completo\n" +
+                                                        "🎓 *Certificación:* ISM\n" +
+                                                        "⏱️ *Duración:* 3 años\n" +
+                                                        "📚 *Modalidad:* Presencial ?\n" +
+                                                        "📌 *Matrícula de Inscripción:* $115.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DISEÑO E IMPRESIÓN 3D", "Modelado 3D profesional.",
-                                        "🖨️ *DISEÑO E IMPRESIÓN 3D*\n\n🎯 *Objetivo:* Modelado 3D de componentes y conjuntos utilizando software profesional.\n📋 *Requisitos:* Título/certificación nivel secundario. Conocimiento básico de dibujo técnico.\n⏱️ *Duración:* 6 módulos (48 horas c/u).\n📚 *Contenidos Clave:* Modelado con Solid Edge v20, Diseño de piezas, Dibujo 2D, Tecnologías de Impresión 3D (FDM, SLA), Slicing.");
+                        createOrUpdateDiplo(repository, "LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO",
+                                        "Licenciatura en Higiene y Seguridad.",
+                                        "🎓 *LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* \n" +
+                                                        "📋 *Requisitos:* \n" +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 34 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:*\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "BROMATOLOGÍA", "Seguridad y calidad alimentaria.",
-                                        "🍎 *BROMATOLOGÍA*\n\n🎯 *Objetivo:* Garantizar seguridad, calidad e inocuidad en la industria alimentaria.\n📋 *Requisitos:* Título/certificación nivel secundario.\n⏱️ *Duración:* 6 módulos (48 horas c/u).\n📚 *Contenidos Clave:* Química de Alimentos, Microbiología, Bromatología y Nutrición, Controles de Calidad, Normativas (HACCP, ISO 22000).");
+                        // --- DIPLOMATURAS ---
 
-                        createOrUpdateDiplo(repository, "AGRICULTURA DE PRECISIÓN",
-                                        "Tecnologías avanzadas para el agro.",
-                                        "🛰️ *AGRICULTURA DE PRECISIÓN*\n\n🎯 *Objetivo:* Aplicar tecnologías avanzadas (TIC) para optimizar recursos y productividad agropecuaria.\n📋 *Requisitos:* Título/certificación nivel secundario.\n⏱️ *Duración:* 290 horas reloj (aprox. 7 meses).\n📚 *Contenidos Clave:* SIG, Sensores Remotos (drones), Big Data, Trazabilidad, Monitoreo de cultivos, Maquinaria de Dosis Variable.");
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN DESARROLLO DE SOFTWARE",
+                                        "Formación práctica en desarrollo de software.",
+                                        "💻 *DIPLOMATURA EN DESARROLLO DE SOFTWARE*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Formación práctica en desarrollo de software, estructuras de datos y algoritmos.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "TECNOLOGÍA AGROPECUARIA",
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN TECNOLOGIAS AGROPECUARIAS",
                                         "Robótica y automatización agrícola.",
-                                        "🚜 *TECNOLOGÍA AGROPECUARIA*\n\n🎯 *Objetivo:* Aplicar robótica y automatización para mejorar productividad y sostenibilidad agrícola.\n📋 *Requisitos:* Título/certificación nivel secundario.\n⏱️ *Duración:* 5 módulos (48 horas c/u).\n📚 *Contenidos Clave:* Robótica Agrícola, Sistemas de Control, Agricultura de Precisión, Electrónica e Instrumentación, IoT en el Agro.");
+                                        "🚜 *DIPLOMATURA EN TECNOLOGIAS AGROPECUARIAS*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Aplicar robótica y automatización para mejorar productividad y sostenibilidad agrícola.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DESARROLLO DE SOFTWARE", "Formación práctica en software.",
-                                        "💻 *DESARROLLO DE SOFTWARE*\n\n🎯 *Objetivo:* Formación práctica en desarrollo de software, estructuras de datos y algoritmos.\n📋 *Requisitos:* Título/certificación nivel secundario.\n⏱️ *Duración:* 384 horas (8 módulos de 48hs).\n📚 *Contenidos Clave:* POO, Estructuras de Datos, Lenguajes (Java, Python), SQL, Sistemas Operativos y Redes.");
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN BROMATOLOGIA",
+                                        "Seguridad y calidad alimentaria.",
+                                        "🍎 *DIPLOMATURA EN BROMATOLOGIA*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Garantizar seguridad, calidad e inocuidad en la industria alimentaria.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "ROBÓTICA", "Sistemas robóticos y automatización.",
-                                        "🤖 *ROBÓTICA*\n\n🎯 *Objetivo:* Diseño, programación e implementación de sistemas robóticos y automatización.\n📋 *Requisitos:* Título/certificación nivel secundario.\n⏱️ *Duración:* 6 módulos (48 horas c/u).\n📚 *Contenidos Clave:* Robótica y Mecánica, Programación (C++, Python, ROS), Electrónica y Sensores, Diseño y Simulación (CAD), Automatización.");
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN ENERGIAS RENOVABLES",
+                                        "Energías renovables.",
+                                        "☀️ *DIPLOMATURA EN ENERGIAS RENOVABLES*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Formación científico-tecnológica para la inserción laboral en el sector de energías renovables.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "MEDIO AMBIENTE", "Diagnóstico y preservación ambiental.",
-                                        "🌍 *MEDIO AMBIENTE*\n\n🎯 *Objetivo:* Detectar y diagnosticar problemas ambientales, preservación sustentable de recursos.\n📋 *Requisitos:* Secundario completo.\n⏱️ *Duración:* 10 meses / 304 horas reloj.\n📚 *Contenidos Clave:* Ciencias de la Tierra, EIA, Normativa Ambiental, Sistemas de Gestión Ambiental, Energía y Medio Ambiente.");
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN GESTION DE RIESGOS",
+                                        "Gestión de riesgos.",
+                                        "⚠️ *DIPLOMATURA EN GESTION DE RIESGOS*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* \n" +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        // --- Nuevas Diplomaturas recuperadas de la DB Local ---
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN MOLDES Y MATRICES",
+                                        "Moldes y matrices.",
+                                        "⚙️ *DIPLOMATURA EN MOLDES Y MATRICES*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* \n" +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN FIBRA OPTICA", "Formación en fibra óptica.",
-                                        "📡 *DIPLOMATURA EN FIBRA OPTICA*\n\n3");
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN AGRICULTURA DE PRECISION",
+                                        "Agricultura de precisión.",
+                                        "🛰️ *DIPLOMATURA EN AGRICULTURA DE PRECISION*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Aplicar tecnologías avanzadas para optimizar recursos y productividad agropecuaria.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
+
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN HIDROCARBUROS",
+                                        "Sector de hidrocarburos.",
+                                        "🛢️ *DIPLOMATURA EN HIDROCARBUROS*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Introducción integral al sector, desde exploración hasta producción, aspectos técnicos y ambientales.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
+
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN DISEÑO E IMPRESION 3D",
+                                        "Diseño e impresión 3D.",
+                                        "🖨️ *DIPLOMATURA EN DISEÑO E IMPRESION 3D*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Modelado 3D de componentes y conjuntos utilizando software profesional.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
+
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN ROBOTICA",
+                                        "Robótica.",
+                                        "🤖 *DIPLOMATURA EN ROBOTICA*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Diseño, programación e implementación de sistemas robóticos y automatización.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
                         createOrUpdateDiplo(repository, "DIPLOMATURA EN CIENCIA DE DATOS E INTELIGENCIA ARTIFICIAL",
                                         "Ciencia de datos e IA.",
-                                        "🧠 *DIPLOMATURA EN CIENCIA DE DATOS E INTELIGENCIA ARTIFICIAL*\n\n4");
+                                        "🧠 *DIPLOMATURA EN CIENCIA DE DATOS E INTELIGENCIA ARTIFICIAL*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* \n" +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN GESTION DE RIESGOS", "Gestión de riesgos.",
-                                        "⚠️ *DIPLOMATURA EN GESTION DE RIESGOS*\n\n5");
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN FIBRA OPTICA",
+                                        "Fibra óptica.",
+                                        "📡 *DIPLOMATURA EN FIBRA OPTICA*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* \n" +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN PRODUCTOS ALIMENTICIOS",
-                                        "Productos alimenticios.",
-                                        "🥫 *DIPLOMATURA EN PRODUCTOS ALIMENTICIOS*\n\n6");
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN MEDIO AMBIENTE",
+                                        "Medio ambiente.",
+                                        "🌍 *DIPLOMATURA EN MEDIO AMBIENTE*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Detectar y diagnosticar problemas ambientales, preservación sustentable de recursos.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "TECNICATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO",
-                                        "Higiene y seguridad.",
-                                        "👷 *TECNICATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO*\n\n1");
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN DESARROLLO WEB",
+                                        "Desarrollo Web.",
+                                        "🌐 *DIPLOMATURA EN DESARROLLO WEB*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Formar recursos capacitados en el desarrollo de soluciones web, capaces de crear, implementar y optimizar aplicaciones y sitios web modernos, utilizando tecnologías y metodologías actuales en el campo del desarrollo web.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "TECNICATURA EN ADMINISTRACION CON ORIENTACION EN MARKETING",
-                                        "Administración y Marketing.",
-                                        "📈 *TECNICATURA EN ADMINISTRACION CON ORIENTACION EN MARKETING*\n\n2");
-
-                        createOrUpdateDiplo(repository, "LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO",
-                                        "Licenciatura en HyS.",
-                                        "🎓 *LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO*\n\n11");
-
-                        createOrUpdateDiplo(repository,
-                                        "PROFESORADO EN DOCENCIA SUPERIOR/ PROFESORADO EN DISCIPLINAS INDUSTRIALES",
-                                        "Tramo de Formacion Docente para Profesionales",
-                                        "👨‍🏫 *PROFESORADO EN DOCENCIA SUPERIOR/ PROFESORADO EN DISCIPLINAS INDUSTRIALES*\n\n13");
+                        createOrUpdateDiplo(repository, "DIPLOMATURA EN INDUSTRIAS ALIMENTARIAS",
+                                        "Industrias alimentarias.",
+                                        "🥫 *DIPLOMATURA EN INDUSTRIAS ALIMENTARIAS*\n\n" +
+                                                        "🎯 *Objetivo/Perfil:* Brindar una formación técnica y práctica en la producción de alimentos, el control de procesos y la aplicación de normas de calidad vigentes.\n"
+                                                        +
+                                                        "📋 *Requisitos:* Título secundario completo. Se exceptúa de este requisito a los aspirantes mayores de 25 años, de acuerdo con la normativa establecida.\n"
+                                                        +
+                                                        "🎓 *Certificación:* UTN\n" +
+                                                        "⏱️ *Duración:* 10 meses\n" +
+                                                        "📚 *Modalidad:* Semipresencial\n" +
+                                                        "📌 *Matrícula de Inscripción:* $85.000 hasta el 28/02/26\n" +
+                                                        "📌 *Cuotas:* mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n"
+                                                        +
+                                                        "🖊️ Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: (pegar link del formulario)\n"
+                                                        +
+                                                        "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
                 };
         }
 

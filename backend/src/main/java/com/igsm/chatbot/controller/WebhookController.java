@@ -264,9 +264,8 @@ public class WebhookController {
     private void showMainMenu(String remoteJid) {
         userSessionService.setUserState(remoteJid, "WAITING_DIPLO_SELECTION");
         StringBuilder menu = new StringBuilder(
-                "🏛️ *Bienvenido al Asistente Virtual del Instituto Superior General San Martin - Universidad Tecnológica Nacional Sede de Extension Aulica SAG* 🏛️\n\n"
-                        +
-                        "Por favor, seleccione el número de la carrera o curso de su interés:\n\n");
+                "Bienvenido a nuestro asistente virtual 👋🏻\n" +
+                        "Para conocer nuestra oferta académica, obtener información y realizar la preinscripción, selecciona el número correspondiente de tu interés:\n\n");
 
         List<com.igsm.chatbot.model.Diplomatura> diplos = diplomaturaRepository.findAll();
         // Sort by ID to maintain consistent order
