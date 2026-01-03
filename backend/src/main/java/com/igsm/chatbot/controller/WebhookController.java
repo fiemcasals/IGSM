@@ -85,7 +85,8 @@ public class WebhookController {
                     logger.info("   Global Exit triggered by {}", remoteJid);
                     userSessionService.clearUserState(remoteJid);
                     evolutionApiService.sendTextMessage(remoteJid,
-                            "👋 ¡Hasta luego! Gracias por contactarte con el IGSM.");
+                            "👋🏻 ¡Hasta Luego! Gracias por contactarte con nosotros.\n\n" +
+                                    "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
                     return;
                 }
 
@@ -122,7 +123,8 @@ public class WebhookController {
                         logger.info("   User {} chose Finish", remoteJid);
                         userSessionService.clearUserState(remoteJid);
                         evolutionApiService.sendTextMessage(remoteJid,
-                                "👋 ¡Hasta luego! Gracias por contactarte con el IGSM.");
+                                "👋🏻 ¡Hasta Luego! Gracias por contactarte con nosotros.\n\n" +
+                                        "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
                     } else {
                         logger.warn("   User {} sent invalid option in WAITING_POST_DIPLO_ACTION: {}", remoteJid, text);
                         evolutionApiService.sendTextMessage(remoteJid,
@@ -244,7 +246,8 @@ public class WebhookController {
                     } else {
                         userSessionService.clearUserState(remoteJid);
                         evolutionApiService.sendTextMessage(remoteJid,
-                                "👋 ¡Hasta luego! Gracias por contactarte con el IGSM.");
+                                "👋🏻 ¡Hasta Luego! Gracias por contactarte con nosotros.\n\n" +
+                                        "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
                     }
                     return;
                 }
@@ -303,7 +306,8 @@ public class WebhookController {
             } else if (selection == diplos.size() + 1) {
                 userSessionService.clearUserState(remoteJid);
                 evolutionApiService.sendTextMessage(remoteJid,
-                        "👋 ¡Hasta luego! Gracias por contactarte con el IGSM.");
+                        "👋🏻 ¡Hasta Luego! Gracias por contactarte con nosotros.\n\n" +
+                                "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
             } else {
                 evolutionApiService.sendTextMessage(remoteJid,
                         "⚠️ Opción no válida. Por favor, ingrese un número del 1 al " + (diplos.size() + 1) + ".");
