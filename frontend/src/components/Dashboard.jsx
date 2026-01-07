@@ -48,25 +48,7 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-white p-4 rounded-lg shadow">
-                    <h2 className="text-xl font-semibold mb-4">Inscripciones por Diplomatura</h2>
-                    <div className="h-[600px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                                layout="vertical"
-                                data={stats.subscriptions}
-                                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" />
-                                <YAxis dataKey="name" type="category" width={250} style={{ fontSize: '12px' }} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="count" fill="#82ca9d" name="Inscripciones" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+
             </div>
         </div>
     );
