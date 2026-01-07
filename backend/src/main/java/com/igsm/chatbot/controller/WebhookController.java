@@ -124,17 +124,26 @@ public class WebhookController {
 
                 // Handle State: WAITING_POST_DIPLO_ACTION
                 if ("WAITING_POST_DIPLO_ACTION".equals(currentState)) {
+                    String categoryType = userSessionService.getSessionData(remoteJid, "current_category_type");
+
                     if (text.equals("1")) {
                         // Pre-inscribirse
                         logger.info("   User {} chose Pre-registration", remoteJid);
                         userSessionService.setUserState(remoteJid, "WAITING_PRE_REG_NAME");
                         evolutionApiService.sendTextMessage(remoteJid,
                                 "📝 *Pre-inscripción*\n\nPor favor, ingrese su *Nombre*:");
-                    } else if (text.equals("2")) {
+                    } else if (categoryType != null && text.equals("2")) {
+                        // Volver a Categoria
+                        logger.info("   User {} chose Back to Category: {}", remoteJid, categoryType);
+                        showSubmenu(remoteJid, categoryType);
+                    } else if ((categoryType != null && text.equals("3"))
+                            || (categoryType == null && text.equals("2"))) {
                         // Volver al menu
                         logger.info("   User {} chose Back to Menu", remoteJid);
+                        userSessionService.removeSessionData(remoteJid, "current_category_type");
                         showMainMenu(remoteJid);
-                    } else if (text.equals("3")) {
+                    } else if ((categoryType != null && text.equals("4"))
+                            || (categoryType == null && text.equals("3"))) {
                         // Finalizar
                         logger.info("   User {} chose Finish", remoteJid);
                         userSessionService.clearUserState(remoteJid);
@@ -143,8 +152,17 @@ public class WebhookController {
                                         "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
                     } else {
                         logger.warn("   User {} sent invalid option in WAITING_POST_DIPLO_ACTION: {}", remoteJid, text);
-                        evolutionApiService.sendTextMessage(remoteJid,
-                                "⚠️ Opción no válida.\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
+                        if (categoryType != null) {
+                            String catDisplay = toTitleCase(categoryType + (categoryType.endsWith("A") ? "s" : ""));
+                            if (categoryType.equals("PROFESORADO"))
+                                catDisplay = "Profesorados";
+                            evolutionApiService.sendTextMessage(remoteJid,
+                                    "⚠️ Opción no válida.\n\n1. Pre-inscribirse\n2. Volver a " + catDisplay
+                                            + "\n3. Volver al Menú Principal\n4. Finalizar conversación");
+                        } else {
+                            evolutionApiService.sendTextMessage(remoteJid,
+                                    "⚠️ Opción no válida.\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
+                        }
                     }
                     return;
                 }
@@ -364,6 +382,7 @@ public class WebhookController {
 
     private void showMainMenu(String remoteJid) {
         userSessionService.setUserState(remoteJid, "WAITING_MAIN_MENU_SELECTION");
+        userSessionService.removeSessionData(remoteJid, "current_category_type"); // Ensure clean state
         StringBuilder menu = new StringBuilder(
                 "Bienvenido a nuestro asistente virtual 👋🏻\n" +
                         "Para conocer nuestra oferta académica, obtener información y realizar la preinscripción, selecciona el número correspondiente de tu interés:\n\n");
@@ -436,6 +455,8 @@ public class WebhookController {
                     showSubmenu(remoteJid, type);
                 } else if (action.startsWith("ID:")) {
                     Long id = Long.parseLong(action.substring(3));
+                    // Direct access, no category context
+                    userSessionService.removeSessionData(remoteJid, "current_category_type");
                     showDiploDetails(remoteJid, id);
                 } else if (action.equals("STATIC:FAQ")) {
                     showFAQMenu(remoteJid);
@@ -467,6 +488,8 @@ public class WebhookController {
         }
 
         userSessionService.setUserState(remoteJid, "WAITING_SUBMENU_SELECTION");
+        userSessionService.putSessionData(remoteJid, "current_category_type", type); // Store context
+
         // Store IDs for submenu selection mapping
         for (int i = 0; i < filtered.size(); i++) {
             userSessionService.putSessionData(remoteJid, "submenu_option_" + (i + 1),
@@ -526,9 +549,23 @@ public class WebhookController {
         userSessionService.putSessionData(remoteJid, "current_diplo_name", selectedDiplo.getName());
         userSessionService.setUserState(remoteJid, "WAITING_POST_DIPLO_ACTION");
 
-        evolutionApiService.sendTextMessage(remoteJid,
-                selectedDiplo.getContent()
-                        + "\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
+        String categoryType = userSessionService.getSessionData(remoteJid, "current_category_type");
+        StringBuilder response = new StringBuilder(selectedDiplo.getContent());
+        response.append("\n\n1. Pre-inscribirse");
+
+        if (categoryType != null) {
+            String catDisplay = toTitleCase(categoryType + (categoryType.endsWith("A") ? "s" : ""));
+            if (categoryType.equals("PROFESORADO"))
+                catDisplay = "Profesorados";
+            response.append("\n2. Volver a ").append(catDisplay);
+            response.append("\n3. Volver al Menú Principal");
+            response.append("\n4. Finalizar conversación");
+        } else {
+            response.append("\n2. Volver al Menú Principal");
+            response.append("\n3. Finalizar conversación");
+        }
+
+        evolutionApiService.sendTextMessage(remoteJid, response.toString());
     }
 
     private void showFAQMenu(String remoteJid) {
