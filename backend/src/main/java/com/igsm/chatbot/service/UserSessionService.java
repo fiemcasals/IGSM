@@ -33,4 +33,10 @@ public class UserSessionService {
     public String getSessionData(String remoteJid, String key) {
         return userSessionData.getOrDefault(remoteJid, new ConcurrentHashMap<>()).get(key);
     }
+
+    public void removeSessionData(String remoteJid, String key) {
+        if (userSessionData.containsKey(remoteJid)) {
+            userSessionData.get(remoteJid).remove(key);
+        }
+    }
 }
