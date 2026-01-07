@@ -8,6 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+import java.util.Comparator;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/webhook")
@@ -106,9 +110,15 @@ public class WebhookController {
                     return;
                 }
 
-                // Handle State: WAITING_DIPLO_SELECTION
-                if ("WAITING_DIPLO_SELECTION".equals(currentState)) {
-                    handleDiploSelection(remoteJid, text);
+                // Handle State: WAITING_MAIN_MENU_SELECTION
+                if ("WAITING_MAIN_MENU_SELECTION".equals(currentState)) {
+                    handleMainMenuSelection(remoteJid, text);
+                    return;
+                }
+
+                // Handle State: WAITING_SUBMENU_SELECTION
+                if ("WAITING_SUBMENU_SELECTION".equals(currentState)) {
+                    handleSubmenuSelection(remoteJid, text);
                     return;
                 }
 
@@ -226,12 +236,6 @@ public class WebhookController {
                         return;
                     }
 
-                    // If text is sent instead of file, we might want to warn, or accept text as a
-                    // link?
-                    // Let's assume strict file upload. If text is present but no fileUrl, it might
-                    // be a user comment.
-                    // If fileUrl is null, let's try to see if it's a text message with a link? No,
-                    // let's enforce media message.
                     if (fileUrl == null) {
                         evolutionApiService.sendTextMessage(remoteJid,
                                 "⚠️ No detectamos un archivo. Por favor envíe la imagen o PDF.");
@@ -262,14 +266,11 @@ public class WebhookController {
 
                 if ("WAITING_CONTACT_CHOICE".equals(currentState)) {
                     if (text.equals("1")) {
-                        // Use current number (remoteJid)
-                        // remoteJid format is usually number@s.whatsapp.net
                         String number = remoteJid.split("@")[0];
                         userSessionService.putSessionData(remoteJid, "contact_phone", number);
                         userSessionService.setUserState(remoteJid, "WAITING_MESSAGE_BODY");
                         evolutionApiService.sendTextMessage(remoteJid, "📝 Por favor, escriba su mensaje o consulta:");
                     } else if (text.equals("2")) {
-                        // Enter another number
                         userSessionService.setUserState(remoteJid, "WAITING_CONTACT_NUMBER");
                         evolutionApiService.sendTextMessage(remoteJid,
                                 "📱 Por favor, ingrese el número de contacto (con código de área):");
@@ -309,7 +310,6 @@ public class WebhookController {
 
                 if ("WAITING_FAQ_SELECTION".equals(currentState)) {
                     List<com.igsm.chatbot.model.FAQ> faqs = faqRepository.findAll();
-                    // Sort by ID for consistent numbering
                     faqs.sort((f1, f2) -> f1.getId().compareTo(f2.getId()));
 
                     try {
@@ -320,13 +320,6 @@ public class WebhookController {
                                     "❓ *" + selectedFAQ.getQuestion() + "*\n\n" +
                                             "💡 " + selectedFAQ.getAnswer() + "\n\n" +
                                             "0. Volver al Menú Principal");
-                            // Stay in FAQ selection or go back? Let's stay or offer back.
-                            // Actually, let's just show the answer and maybe offer to go back to main menu.
-                            // But user might want to see another FAQ.
-                            // Let's keep state as WAITING_FAQ_SELECTION but we need to re-print the list?
-                            // Or maybe just "0 to go back".
-                            // If we keep WAITING_FAQ_SELECTION, next input is interpreted as FAQ selection.
-                            // So if they type "0", we should handle it.
                         } else if (selection == 0) {
                             showMainMenu(remoteJid);
                         } else {
@@ -340,7 +333,7 @@ public class WebhookController {
 
                 // Default / Fallback
                 if (currentState == null || currentState.isEmpty() || "NONE".equals(currentState)) {
-                    logger.info("   No active state. Ignoring message to allow free chat.");
+                    logger.info("   No active active state. Ignoring message to allow free chat.");
                     return;
                 }
 
@@ -350,93 +343,228 @@ public class WebhookController {
         }
     }
 
+    private String toTitleCase(String input) {
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
+        StringBuilder titleCase = new StringBuilder();
+        boolean nextTitleCase = true;
+
+        for (char c : input.toLowerCase().toCharArray()) {
+            if (Character.isSpaceChar(c)) {
+                nextTitleCase = true;
+            } else if (nextTitleCase) {
+                c = Character.toTitleCase(c);
+                nextTitleCase = false;
+            }
+            titleCase.append(c);
+        }
+        return titleCase.toString();
+    }
+
     private void showMainMenu(String remoteJid) {
-        userSessionService.setUserState(remoteJid, "WAITING_DIPLO_SELECTION");
+        userSessionService.setUserState(remoteJid, "WAITING_MAIN_MENU_SELECTION");
         StringBuilder menu = new StringBuilder(
                 "Bienvenido a nuestro asistente virtual 👋🏻\n" +
                         "Para conocer nuestra oferta académica, obtener información y realizar la preinscripción, selecciona el número correspondiente de tu interés:\n\n");
 
-        List<com.igsm.chatbot.model.Diplomatura> diplos = diplomaturaRepository.findAll();
-        // Sort by ID to maintain consistent order
-        diplos.sort((d1, d2) -> d1.getId().compareTo(d2.getId()));
+        List<com.igsm.chatbot.model.Diplomatura> allDiplos = diplomaturaRepository.findAll();
+        Map<String, List<com.igsm.chatbot.model.Diplomatura>> grouped = allDiplos.stream()
+                .collect(Collectors.groupingBy(d -> d.getType() != null ? d.getType().toUpperCase() : "OTROS"));
 
-        for (int i = 0; i < diplos.size(); i++) {
-            menu.append((i + 1)).append(". ").append(diplos.get(i).getName()).append("\n");
+        // Define order of categories
+        List<String> orderedTypes = List.of("DIPLOMATURA", "TECNICATURA", "LICENCIATURA", "PROFESORADO", "OTROS");
+        List<String> availableOptions = new ArrayList<>();
+        Map<Integer, String> optionMap = new HashMap<>(); // Index -> Type or ID
+
+        int index = 1;
+
+        for (String type : orderedTypes) {
+            if (grouped.containsKey(type)) {
+                List<com.igsm.chatbot.model.Diplomatura> items = grouped.get(type);
+                if (items.size() > 1) {
+                    // Show Category Name (Pluralized roughly)
+                    String displayName = toTitleCase(type + (type.endsWith("A") ? "s" : ""));
+                    if (type.equals("PROFESORADO"))
+                        displayName = "Profesorados"; // Manual fix if needed, but 'Profesorado' -> 'Profesorados' logic
+                                                      // is simple
+
+                    menu.append(index).append(". ").append(displayName).append("\n");
+                    userSessionService.putSessionData(remoteJid, "menu_option_" + index, "TYPE:" + type);
+                    index++;
+                } else if (items.size() == 1) {
+                    // Show Item Name directly
+                    com.igsm.chatbot.model.Diplomatura item = items.get(0);
+                    menu.append(index).append(". ").append(toTitleCase(item.getName())).append("\n");
+                    userSessionService.putSessionData(remoteJid, "menu_option_" + index, "ID:" + item.getId());
+                    index++;
+                }
+            }
         }
-        menu.append((diplos.size() + 1)).append(". Preguntas Frecuentes\n");
-        menu.append((diplos.size() + 2)).append(". Deje su mensaje a un representante\n");
-        menu.append((diplos.size() + 3)).append(". FINALIZAR CONVERSACIÓN");
+
+        // Add static options
+        menu.append(index).append(". Preguntas Frecuentes\n");
+        userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:FAQ");
+        index++;
+
+        menu.append(index).append(". Deje su mensaje a un representante\n");
+        userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:CONTACT");
+        index++;
+
+        menu.append(index).append(". FINALIZAR CONVERSACIÓN");
+        userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:EXIT");
+
+        userSessionService.putSessionData(remoteJid, "max_menu_options", String.valueOf(index));
+        evolutionApiService.sendTextMessage(remoteJid, menu.toString());
+    }
+
+    private void handleMainMenuSelection(String remoteJid, String text) {
+        try {
+            int selection = Integer.parseInt(text);
+            String maxOptionsStr = userSessionService.getSessionData(remoteJid, "max_menu_options");
+            int maxOptions = maxOptionsStr != null ? Integer.parseInt(maxOptionsStr) : 0;
+
+            if (selection >= 1 && selection <= maxOptions) {
+                String action = userSessionService.getSessionData(remoteJid, "menu_option_" + selection);
+                if (action == null) {
+                    evolutionApiService.sendTextMessage(remoteJid, "⚠️ Opción no válida.");
+                    return;
+                }
+
+                if (action.startsWith("TYPE:")) {
+                    String type = action.substring(5);
+                    showSubmenu(remoteJid, type);
+                } else if (action.startsWith("ID:")) {
+                    Long id = Long.parseLong(action.substring(3));
+                    showDiploDetails(remoteJid, id);
+                } else if (action.equals("STATIC:FAQ")) {
+                    showFAQMenu(remoteJid);
+                } else if (action.equals("STATIC:CONTACT")) {
+                    startContactFlow(remoteJid);
+                } else if (action.equals("STATIC:EXIT")) {
+                    exitConversation(remoteJid);
+                }
+            } else {
+                evolutionApiService.sendTextMessage(remoteJid,
+                        "⚠️ Opción no válida. Por favor, ingrese un número del 1 al " + maxOptions + ".");
+            }
+        } catch (NumberFormatException e) {
+            evolutionApiService.sendTextMessage(remoteJid, "⚠️ Por favor, ingrese un número válido.");
+        }
+    }
+
+    private void showSubmenu(String remoteJid, String type) {
+        List<com.igsm.chatbot.model.Diplomatura> allDiplos = diplomaturaRepository.findAll();
+        List<com.igsm.chatbot.model.Diplomatura> filtered = allDiplos.stream()
+                .filter(d -> d.getType() != null && d.getType().equalsIgnoreCase(type))
+                .sorted(Comparator.comparing(com.igsm.chatbot.model.Diplomatura::getName))
+                .collect(Collectors.toList());
+
+        if (filtered.isEmpty()) {
+            evolutionApiService.sendTextMessage(remoteJid, "⚠️ No hay opciones disponibles en esta categoría.");
+            showMainMenu(remoteJid);
+            return;
+        }
+
+        userSessionService.setUserState(remoteJid, "WAITING_SUBMENU_SELECTION");
+        // Store IDs for submenu selection mapping
+        for (int i = 0; i < filtered.size(); i++) {
+            userSessionService.putSessionData(remoteJid, "submenu_option_" + (i + 1),
+                    String.valueOf(filtered.get(i).getId()));
+        }
+        userSessionService.putSessionData(remoteJid, "submenu_max_options", String.valueOf(filtered.size()));
+
+        StringBuilder menu = new StringBuilder("🎓 *" + toTitleCase(type) + "*\n\nSeleccione una opción:\n\n");
+        for (int i = 0; i < filtered.size(); i++) {
+            menu.append((i + 1)).append(". ").append(toTitleCase(filtered.get(i).getName())).append("\n");
+        }
+        menu.append("\n0. Volver al Menú Principal");
 
         evolutionApiService.sendTextMessage(remoteJid, menu.toString());
     }
 
-    private void handleDiploSelection(String remoteJid, String text) {
-        List<com.igsm.chatbot.model.Diplomatura> diplos = diplomaturaRepository.findAll();
-        diplos.sort((d1, d2) -> d1.getId().compareTo(d2.getId()));
-
+    private void handleSubmenuSelection(String remoteJid, String text) {
         try {
             int selection = Integer.parseInt(text);
-            if (selection >= 1 && selection <= diplos.size()) {
-                com.igsm.chatbot.model.Diplomatura selectedDiplo = diplos.get(selection - 1);
+            if (selection == 0) {
+                showMainMenu(remoteJid);
+                return;
+            }
 
-                // Log Inquiry
-                com.igsm.chatbot.model.Inquiry inquiry = new com.igsm.chatbot.model.Inquiry();
-                inquiry.setDiplomatura(selectedDiplo);
-                inquiryRepository.save(inquiry);
+            String maxOptionsStr = userSessionService.getSessionData(remoteJid, "submenu_max_options");
+            int maxOptions = maxOptionsStr != null ? Integer.parseInt(maxOptionsStr) : 0;
 
-                userSessionService.putSessionData(remoteJid, "current_diplo_id", String.valueOf(selectedDiplo.getId()));
-                userSessionService.putSessionData(remoteJid, "current_diplo_name", selectedDiplo.getName());
-                userSessionService.setUserState(remoteJid, "WAITING_POST_DIPLO_ACTION");
-                evolutionApiService.sendTextMessage(remoteJid,
-                        selectedDiplo.getContent()
-                                + "\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
-            } else if (selection == diplos.size() + 1) {
-                // Preguntas Frecuentes
-                List<com.igsm.chatbot.model.FAQ> faqs = faqRepository.findAll();
-                if (faqs.isEmpty()) {
-                    evolutionApiService.sendTextMessage(remoteJid,
-                            "⚠️ No hay preguntas frecuentes cargadas por el momento.\n\n0. Volver al Menú Principal");
-                    // We can set state to generic waiting or just leave it.
-                    // If we leave it, next message might be interpreted as diplo selection if we
-                    // don't change state.
-                    // But we are in WAITING_DIPLO_SELECTION.
-                    // Let's just return.
-                    return;
+            if (selection >= 1 && selection <= maxOptions) {
+                String idStr = userSessionService.getSessionData(remoteJid, "submenu_option_" + selection);
+                if (idStr != null) {
+                    showDiploDetails(remoteJid, Long.parseLong(idStr));
+                } else {
+                    evolutionApiService.sendTextMessage(remoteJid, "⚠️ Error al recuperar la opción.");
                 }
-
-                faqs.sort((f1, f2) -> f1.getId().compareTo(f2.getId()));
-                StringBuilder faqMenu = new StringBuilder(
-                        "❓ *Preguntas Frecuentes*\n\nSeleccione una pregunta para ver la respuesta:\n\n");
-                for (int i = 0; i < faqs.size(); i++) {
-                    faqMenu.append((i + 1)).append(". ").append(faqs.get(i).getQuestion()).append("\n");
-                }
-                faqMenu.append("\n0. Volver al Menú Principal");
-
-                userSessionService.setUserState(remoteJid, "WAITING_FAQ_SELECTION");
-                evolutionApiService.sendTextMessage(remoteJid, faqMenu.toString());
-
-            } else if (selection == diplos.size() + 2) {
-                // Deje su mensaje a un representante
-                userSessionService.setUserState(remoteJid, "WAITING_CONTACT_CHOICE");
-                evolutionApiService.sendTextMessage(remoteJid,
-                        "📞 *Contacto*\n\n" +
-                                "¿A qué número desea que lo contactemos?\n\n" +
-                                "1. Usar el número desde el cual se comunica (" + remoteJid.split("@")[0] + ")\n" +
-                                "2. Ingresar otro número");
-
-            } else if (selection == diplos.size() + 3) {
-                userSessionService.clearUserState(remoteJid);
-                evolutionApiService.sendTextMessage(remoteJid,
-                        "👋🏻 ¡Hasta Luego! Gracias por contactarte con nosotros.\n\n" +
-                                "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
             } else {
-                evolutionApiService.sendTextMessage(remoteJid,
-                        "⚠️ Opción no válida. Por favor, ingrese un número del 1 al " + (diplos.size() + 3) + ".");
+                evolutionApiService.sendTextMessage(remoteJid, "⚠️ Opción no válida.");
             }
         } catch (NumberFormatException e) {
-            evolutionApiService.sendTextMessage(remoteJid,
-                    "⚠️ Opción no válida. Por favor, ingrese un número válido.");
+            evolutionApiService.sendTextMessage(remoteJid, "⚠️ Por favor, ingrese un número válido.");
         }
+    }
+
+    private void showDiploDetails(String remoteJid, Long diploId) {
+        com.igsm.chatbot.model.Diplomatura selectedDiplo = diplomaturaRepository.findById(diploId).orElse(null);
+        if (selectedDiplo == null) {
+            evolutionApiService.sendTextMessage(remoteJid, "⚠️ La opción seleccionada no está disponible.");
+            showMainMenu(remoteJid);
+            return;
+        }
+
+        // Log Inquiry
+        com.igsm.chatbot.model.Inquiry inquiry = new com.igsm.chatbot.model.Inquiry();
+        inquiry.setDiplomatura(selectedDiplo);
+        inquiryRepository.save(inquiry);
+
+        userSessionService.putSessionData(remoteJid, "current_diplo_id", String.valueOf(selectedDiplo.getId()));
+        userSessionService.putSessionData(remoteJid, "current_diplo_name", selectedDiplo.getName());
+        userSessionService.setUserState(remoteJid, "WAITING_POST_DIPLO_ACTION");
+
+        evolutionApiService.sendTextMessage(remoteJid,
+                selectedDiplo.getContent()
+                        + "\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
+    }
+
+    private void showFAQMenu(String remoteJid) {
+        List<com.igsm.chatbot.model.FAQ> faqs = faqRepository.findAll();
+        if (faqs.isEmpty()) {
+            evolutionApiService.sendTextMessage(remoteJid,
+                    "⚠️ No hay preguntas frecuentes cargadas por el momento.\n\n0. Volver al Menú Principal");
+            return;
+        }
+
+        faqs.sort((f1, f2) -> f1.getId().compareTo(f2.getId()));
+        StringBuilder faqMenu = new StringBuilder(
+                "❓ *Preguntas Frecuentes*\n\nSeleccione una pregunta para ver la respuesta:\n\n");
+        for (int i = 0; i < faqs.size(); i++) {
+            faqMenu.append((i + 1)).append(". ").append(faqs.get(i).getQuestion()).append("\n");
+        }
+        faqMenu.append("\n0. Volver al Menú Principal");
+
+        userSessionService.setUserState(remoteJid, "WAITING_FAQ_SELECTION");
+        evolutionApiService.sendTextMessage(remoteJid, faqMenu.toString());
+    }
+
+    private void startContactFlow(String remoteJid) {
+        userSessionService.setUserState(remoteJid, "WAITING_CONTACT_CHOICE");
+        evolutionApiService.sendTextMessage(remoteJid,
+                "📞 *Contacto*\n\n" +
+                        "¿A qué número desea que lo contactemos?\n\n" +
+                        "1. Usar el número desde el cual se comunica (" + remoteJid.split("@")[0] + ")\n" +
+                        "2. Ingresar otro número");
+    }
+
+    private void exitConversation(String remoteJid) {
+        userSessionService.clearUserState(remoteJid);
+        evolutionApiService.sendTextMessage(remoteJid,
+                "👋🏻 ¡Hasta Luego! Gracias por contactarte con nosotros.\n\n" +
+                        "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
     }
 
     private void saveSubscription(String remoteJid, com.igsm.chatbot.model.Diplomatura d, String fileUrl,
