@@ -490,5 +490,4 @@ public class WebhookController {
                         "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
     }
 
-    }
 }
