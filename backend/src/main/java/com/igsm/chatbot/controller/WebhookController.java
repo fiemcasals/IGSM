@@ -126,156 +126,42 @@ public class WebhookController {
                 if ("WAITING_POST_DIPLO_ACTION".equals(currentState)) {
                     String categoryType = userSessionService.getSessionData(remoteJid, "current_category_type");
 
-                    if (text.equals("1")) {
-                        // Pre-inscribirse
-                        logger.info("   User {} chose Pre-registration", remoteJid);
-                        userSessionService.setUserState(remoteJid, "WAITING_PRE_REG_NAME");
-                        evolutionApiService.sendTextMessage(remoteJid,
-                                "📝 *Pre-inscripción*\n\nPor favor, ingrese su *Nombre*:");
-                    } else if (categoryType != null && text.equals("2")) {
-                        // Volver a Categoria
-                        logger.info("   User {} chose Back to Category: {}", remoteJid, categoryType);
-                        showSubmenu(remoteJid, categoryType);
-                    } else if ((categoryType != null && text.equals("3"))
-                            || (categoryType == null && text.equals("2"))) {
-                        // Volver al menu
-                        logger.info("   User {} chose Back to Menu", remoteJid);
-                        userSessionService.removeSessionData(remoteJid, "current_category_type");
-                        showMainMenu(remoteJid);
-                    } else if ((categoryType != null && text.equals("4"))
-                            || (categoryType == null && text.equals("3"))) {
-                        // Finalizar
-                        logger.info("   User {} chose Finish", remoteJid);
-                        userSessionService.clearUserState(remoteJid);
-                        evolutionApiService.sendTextMessage(remoteJid,
-                                "👋🏻 ¡Hasta Luego! Gracias por contactarte con nosotros.\n\n" +
-                                        "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
-                    } else {
-                        logger.warn("   User {} sent invalid option in WAITING_POST_DIPLO_ACTION: {}", remoteJid, text);
-                        if (categoryType != null) {
+                    if (categoryType != null) {
+                        if (text.equals("1")) {
+                            // Volver a Categoria
+                            logger.info("   User {} chose Back to Category: {}", remoteJid, categoryType);
+                            showSubmenu(remoteJid, categoryType);
+                        } else if (text.equals("2")) {
+                            // Volver al menu
+                            logger.info("   User {} chose Back to Menu", remoteJid);
+                            userSessionService.removeSessionData(remoteJid, "current_category_type");
+                            showMainMenu(remoteJid);
+                        } else if (text.equals("3")) {
+                            // Finalizar
+                            logger.info("   User {} chose Finish", remoteJid);
+                            exitConversation(remoteJid);
+                        } else {
                             String catDisplay = toTitleCase(categoryType + (categoryType.endsWith("A") ? "s" : ""));
                             if (categoryType.equals("PROFESORADO"))
                                 catDisplay = "Profesorados";
                             evolutionApiService.sendTextMessage(remoteJid,
-                                    "⚠️ Opción no válida.\n\n1. Pre-inscribirse\n2. Volver a " + catDisplay
-                                            + "\n3. Volver al Menú Principal\n4. Finalizar conversación");
+                                    "⚠️ Opción no válida.\n\n1. Volver a " + catDisplay
+                                            + "\n2. Volver al Menú Principal\n3. Finalizar conversación");
+                        }
+                    } else {
+                        // No category context
+                        if (text.equals("1")) {
+                            // Volver al menu
+                            logger.info("   User {} chose Back to Menu", remoteJid);
+                            showMainMenu(remoteJid);
+                        } else if (text.equals("2")) {
+                            // Finalizar
+                            logger.info("   User {} chose Finish", remoteJid);
+                            exitConversation(remoteJid);
                         } else {
                             evolutionApiService.sendTextMessage(remoteJid,
-                                    "⚠️ Opción no válida.\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
+                                    "⚠️ Opción no válida.\n\n1. Volver al Menú Principal\n2. Finalizar conversación");
                         }
-                    }
-                    return;
-                }
-
-                // --- Pre-registration Flow ---
-
-                if ("WAITING_PRE_REG_NAME".equals(currentState)) {
-                    userSessionService.putSessionData(remoteJid, "name", text);
-                    userSessionService.setUserState(remoteJid, "WAITING_PRE_REG_SURNAME");
-                    evolutionApiService.sendTextMessage(remoteJid, "Por favor, ingrese su *Apellido*:");
-                    return;
-                }
-
-                if ("WAITING_PRE_REG_SURNAME".equals(currentState)) {
-                    userSessionService.putSessionData(remoteJid, "surname", text);
-                    userSessionService.setUserState(remoteJid, "WAITING_PRE_REG_DNI");
-                    evolutionApiService.sendTextMessage(remoteJid, "🔢 Ingrese su *DNI* (sin puntos):");
-                    return;
-                }
-
-                if ("WAITING_PRE_REG_DNI".equals(currentState)) {
-                    userSessionService.putSessionData(remoteJid, "dni", text);
-                    userSessionService.setUserState(remoteJid, "WAITING_PRE_REG_MAIL");
-                    evolutionApiService.sendTextMessage(remoteJid, "📧 Ingrese su *Correo Electrónico*:");
-                    return;
-                }
-
-                if ("WAITING_PRE_REG_MAIL".equals(currentState)) {
-                    userSessionService.putSessionData(remoteJid, "mail", text);
-                    userSessionService.setUserState(remoteJid, "WAITING_PRE_REG_EDUCATION");
-                    evolutionApiService.sendTextMessage(remoteJid,
-                            "🎓 Ingrese su *Nivel de Estudio alcanzado* (ej. Secundario, Terciario, Universitario):");
-                    return;
-                }
-
-                if ("WAITING_PRE_REG_EDUCATION".equals(currentState)) {
-                    userSessionService.putSessionData(remoteJid, "education", text);
-                    userSessionService.setUserState(remoteJid, "WAITING_PRE_REG_PHONE");
-                    evolutionApiService.sendTextMessage(remoteJid, "📱 Ingrese su *Número de Celular*:");
-                    return;
-                }
-
-                if ("WAITING_PRE_REG_PHONE".equals(currentState)) {
-                    userSessionService.putSessionData(remoteJid, "phone", text);
-
-                    String diploIdStr = userSessionService.getSessionData(remoteJid, "current_diplo_id");
-                    Long diploId = Long.parseLong(diploIdStr);
-                    com.igsm.chatbot.model.Diplomatura d = diplomaturaRepository.findById(diploId).orElse(null);
-
-                    if (d != null) {
-                        logger.info("Checking Diplo Type for Upload: ID={}, Name={}, Type={}", d.getId(), d.getName(),
-                                d.getType());
-                    }
-
-                    if (d != null && "LICENCIATURA".equalsIgnoreCase(d.getType())) {
-                        userSessionService.setUserState(remoteJid, "WAITING_FILE_UPLOAD");
-                        evolutionApiService.sendTextMessage(remoteJid,
-                                "📂 Para finalizar la inscripción a la Licenciatura, por favor *envíe una foto o PDF* de su título previo o documentación requerida.");
-                        return;
-                    }
-
-                    // If not Licenciatura, save immediately
-                    saveSubscription(remoteJid, d, null, null);
-                    return;
-                }
-
-                if ("WAITING_FILE_UPLOAD".equals(currentState)) {
-                    String mimeType = null;
-                    String fileUrl = null;
-
-                    // Check for media
-                    Map<String, Object> msg = (Map<String, Object>) ((Map<String, Object>) payload.get("data"))
-                            .get("message");
-                    if (msg != null) {
-                        if (msg.containsKey("imageMessage")) {
-                            Map<String, Object> img = (Map<String, Object>) msg.get("imageMessage");
-                            fileUrl = (String) img.get("url");
-                            mimeType = (String) img.get("mimetype");
-                        } else if (msg.containsKey("documentMessage")) {
-                            Map<String, Object> doc = (Map<String, Object>) msg.get("documentMessage");
-                            fileUrl = (String) doc.get("url");
-                            mimeType = (String) doc.get("mimetype");
-                        }
-                    }
-
-                    if (fileUrl == null && (text == null || text.isEmpty())) {
-                        evolutionApiService.sendTextMessage(remoteJid,
-                                "⚠️ Por favor, envíe un archivo (Imagen o PDF).");
-                        return;
-                    }
-
-                    if (fileUrl == null) {
-                        evolutionApiService.sendTextMessage(remoteJid,
-                                "⚠️ No detectamos un archivo. Por favor envíe la imagen o PDF.");
-                        return;
-                    }
-
-                    String diploIdStr = userSessionService.getSessionData(remoteJid, "current_diplo_id");
-                    Long diploId = Long.parseLong(diploIdStr);
-                    com.igsm.chatbot.model.Diplomatura d = diplomaturaRepository.findById(diploId).orElse(null);
-
-                    saveSubscription(remoteJid, d, fileUrl, mimeType);
-                    return;
-                }
-
-                if ("WAITING_FINAL_DECISION".equals(currentState)) {
-                    if (text.equals("1")) {
-                        showMainMenu(remoteJid);
-                    } else {
-                        userSessionService.clearUserState(remoteJid);
-                        evolutionApiService.sendTextMessage(remoteJid,
-                                "👋🏻 ¡Hasta Luego! Gracias por contactarte con nosotros.\n\n" +
-                                        "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
                     }
                     return;
                 }
@@ -551,18 +437,18 @@ public class WebhookController {
 
         String categoryType = userSessionService.getSessionData(remoteJid, "current_category_type");
         StringBuilder response = new StringBuilder(selectedDiplo.getContent());
-        response.append("\n\n1. Pre-inscribirse");
+        response.append("\n");
 
         if (categoryType != null) {
             String catDisplay = toTitleCase(categoryType + (categoryType.endsWith("A") ? "s" : ""));
             if (categoryType.equals("PROFESORADO"))
                 catDisplay = "Profesorados";
-            response.append("\n2. Volver a ").append(catDisplay);
-            response.append("\n3. Volver al Menú Principal");
-            response.append("\n4. Finalizar conversación");
-        } else {
+            response.append("\n1. Volver a ").append(catDisplay);
             response.append("\n2. Volver al Menú Principal");
             response.append("\n3. Finalizar conversación");
+        } else {
+            response.append("\n1. Volver al Menú Principal");
+            response.append("\n2. Finalizar conversación");
         }
 
         evolutionApiService.sendTextMessage(remoteJid, response.toString());
@@ -604,46 +490,5 @@ public class WebhookController {
                         "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
     }
 
-    private void saveSubscription(String remoteJid, com.igsm.chatbot.model.Diplomatura d, String fileUrl,
-            String mimeType) {
-        String name = userSessionService.getSessionData(remoteJid, "name");
-        String surname = userSessionService.getSessionData(remoteJid, "surname");
-        String dni = userSessionService.getSessionData(remoteJid, "dni");
-        String mail = userSessionService.getSessionData(remoteJid, "mail");
-        String edu = userSessionService.getSessionData(remoteJid, "education");
-        String phone = userSessionService.getSessionData(remoteJid, "phone");
-
-        try {
-            if (d != null) {
-                com.igsm.chatbot.model.Subscription sub = new com.igsm.chatbot.model.Subscription();
-                sub.setDiplomatura(d);
-                sub.setUserId(remoteJid);
-                sub.setName(name);
-                sub.setSurname(surname);
-                sub.setDni(dni);
-                sub.setMail(mail);
-                sub.setEducation(edu);
-                sub.setPhone(phone);
-                sub.setFileUrl(fileUrl);
-                sub.setMimeType(mimeType);
-                subscriptionRepository.save(sub);
-            }
-        } catch (Exception e) {
-            logger.error("Error saving subscription: {}", e.getMessage(), e);
-        }
-
-        logger.info("✅ NEW PRE-REGISTRATION SAVED:");
-        logger.info("Diplo: {}", d.getName());
-        logger.info("User: {} {}", name, surname);
-        if (fileUrl != null)
-            logger.info("File: {}", fileUrl);
-
-        userSessionService.setUserState(remoteJid, "WAITING_FINAL_DECISION");
-        evolutionApiService.sendTextMessage(remoteJid,
-                "✅ *¡Datos registrados correctamente!*\n\n" +
-                        "Hemos recibido su pre-inscripción para la *" + d.getName() + "*.\n" +
-                        "Nos pondremos en contacto con usted a la brevedad.\n\n" +
-                        "1. Volver al Menú Principal\n" +
-                        "2. Finalizar");
     }
 }
