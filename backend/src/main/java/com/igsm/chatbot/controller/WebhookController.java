@@ -30,6 +30,12 @@ public class WebhookController {
     @Autowired
     private com.igsm.chatbot.repository.SubscriptionRepository subscriptionRepository;
 
+    @Autowired
+    private com.igsm.chatbot.repository.ConsultationRepository consultationRepository;
+
+    @Autowired
+    private com.igsm.chatbot.repository.FAQRepository faqRepository;
+
     @PostMapping("/evolution")
     public void receiveMessage(@RequestBody Map<String, Object> payload) {
         try {
@@ -252,6 +258,86 @@ public class WebhookController {
                     return;
                 }
 
+                // --- Consultation Flow ---
+
+                if ("WAITING_CONTACT_CHOICE".equals(currentState)) {
+                    if (text.equals("1")) {
+                        // Use current number (remoteJid)
+                        // remoteJid format is usually number@s.whatsapp.net
+                        String number = remoteJid.split("@")[0];
+                        userSessionService.putSessionData(remoteJid, "contact_phone", number);
+                        userSessionService.setUserState(remoteJid, "WAITING_MESSAGE_BODY");
+                        evolutionApiService.sendTextMessage(remoteJid, "📝 Por favor, escriba su mensaje o consulta:");
+                    } else if (text.equals("2")) {
+                        // Enter another number
+                        userSessionService.setUserState(remoteJid, "WAITING_CONTACT_NUMBER");
+                        evolutionApiService.sendTextMessage(remoteJid,
+                                "📱 Por favor, ingrese el número de contacto (con código de área):");
+                    } else {
+                        evolutionApiService.sendTextMessage(remoteJid,
+                                "⚠️ Opción no válida.\n1. Usar el número actual\n2. Ingresar otro número");
+                    }
+                    return;
+                }
+
+                if ("WAITING_CONTACT_NUMBER".equals(currentState)) {
+                    userSessionService.putSessionData(remoteJid, "contact_phone", text);
+                    userSessionService.setUserState(remoteJid, "WAITING_MESSAGE_BODY");
+                    evolutionApiService.sendTextMessage(remoteJid, "📝 Por favor, escriba su mensaje o consulta:");
+                    return;
+                }
+
+                if ("WAITING_MESSAGE_BODY".equals(currentState)) {
+                    String contactPhone = userSessionService.getSessionData(remoteJid, "contact_phone");
+
+                    com.igsm.chatbot.model.Consultation consultation = new com.igsm.chatbot.model.Consultation();
+                    consultation.setUserId(remoteJid);
+                    consultation.setContactPhone(contactPhone);
+                    consultation.setMessage(text);
+                    consultationRepository.save(consultation);
+
+                    userSessionService.clearUserState(remoteJid);
+                    evolutionApiService.sendTextMessage(remoteJid,
+                            "✅ *¡Mensaje recibido!*\n\n" +
+                                    "Un representante se pondrá en contacto con usted a la brevedad al número: "
+                                    + contactPhone + ".\n\n" +
+                                    "¡Muchas gracias!");
+                    return;
+                }
+
+                // --- FAQ Flow ---
+
+                if ("WAITING_FAQ_SELECTION".equals(currentState)) {
+                    List<com.igsm.chatbot.model.FAQ> faqs = faqRepository.findAll();
+                    // Sort by ID for consistent numbering
+                    faqs.sort((f1, f2) -> f1.getId().compareTo(f2.getId()));
+
+                    try {
+                        int selection = Integer.parseInt(text);
+                        if (selection >= 1 && selection <= faqs.size()) {
+                            com.igsm.chatbot.model.FAQ selectedFAQ = faqs.get(selection - 1);
+                            evolutionApiService.sendTextMessage(remoteJid,
+                                    "❓ *" + selectedFAQ.getQuestion() + "*\n\n" +
+                                            "💡 " + selectedFAQ.getAnswer() + "\n\n" +
+                                            "0. Volver al Menú Principal");
+                            // Stay in FAQ selection or go back? Let's stay or offer back.
+                            // Actually, let's just show the answer and maybe offer to go back to main menu.
+                            // But user might want to see another FAQ.
+                            // Let's keep state as WAITING_FAQ_SELECTION but we need to re-print the list?
+                            // Or maybe just "0 to go back".
+                            // If we keep WAITING_FAQ_SELECTION, next input is interpreted as FAQ selection.
+                            // So if they type "0", we should handle it.
+                        } else if (selection == 0) {
+                            showMainMenu(remoteJid);
+                        } else {
+                            evolutionApiService.sendTextMessage(remoteJid, "⚠️ Opción no válida.");
+                        }
+                    } catch (NumberFormatException e) {
+                        evolutionApiService.sendTextMessage(remoteJid, "⚠️ Por favor, ingrese un número válido.");
+                    }
+                    return;
+                }
+
                 // Default / Fallback
                 if (currentState == null || currentState.isEmpty() || "NONE".equals(currentState)) {
                     logger.info("   No active state. Ignoring message to allow free chat.");
@@ -277,7 +363,9 @@ public class WebhookController {
         for (int i = 0; i < diplos.size(); i++) {
             menu.append((i + 1)).append(". ").append(diplos.get(i).getName()).append("\n");
         }
-        menu.append((diplos.size() + 1)).append(". FINALIZAR CONVERSACIÓN");
+        menu.append((diplos.size() + 1)).append(". Preguntas Frecuentes\n");
+        menu.append((diplos.size() + 2)).append(". Deje su mensaje a un representante\n");
+        menu.append((diplos.size() + 3)).append(". FINALIZAR CONVERSACIÓN");
 
         evolutionApiService.sendTextMessage(remoteJid, menu.toString());
     }
@@ -299,18 +387,51 @@ public class WebhookController {
                 userSessionService.putSessionData(remoteJid, "current_diplo_id", String.valueOf(selectedDiplo.getId()));
                 userSessionService.putSessionData(remoteJid, "current_diplo_name", selectedDiplo.getName());
                 userSessionService.setUserState(remoteJid, "WAITING_POST_DIPLO_ACTION");
-
                 evolutionApiService.sendTextMessage(remoteJid,
                         selectedDiplo.getContent()
                                 + "\n\n1. Pre-inscribirse\n2. Volver al Menú Principal\n3. Finalizar conversación");
             } else if (selection == diplos.size() + 1) {
+                // Preguntas Frecuentes
+                List<com.igsm.chatbot.model.FAQ> faqs = faqRepository.findAll();
+                if (faqs.isEmpty()) {
+                    evolutionApiService.sendTextMessage(remoteJid,
+                            "⚠️ No hay preguntas frecuentes cargadas por el momento.\n\n0. Volver al Menú Principal");
+                    // We can set state to generic waiting or just leave it.
+                    // If we leave it, next message might be interpreted as diplo selection if we
+                    // don't change state.
+                    // But we are in WAITING_DIPLO_SELECTION.
+                    // Let's just return.
+                    return;
+                }
+
+                faqs.sort((f1, f2) -> f1.getId().compareTo(f2.getId()));
+                StringBuilder faqMenu = new StringBuilder(
+                        "❓ *Preguntas Frecuentes*\n\nSeleccione una pregunta para ver la respuesta:\n\n");
+                for (int i = 0; i < faqs.size(); i++) {
+                    faqMenu.append((i + 1)).append(". ").append(faqs.get(i).getQuestion()).append("\n");
+                }
+                faqMenu.append("\n0. Volver al Menú Principal");
+
+                userSessionService.setUserState(remoteJid, "WAITING_FAQ_SELECTION");
+                evolutionApiService.sendTextMessage(remoteJid, faqMenu.toString());
+
+            } else if (selection == diplos.size() + 2) {
+                // Deje su mensaje a un representante
+                userSessionService.setUserState(remoteJid, "WAITING_CONTACT_CHOICE");
+                evolutionApiService.sendTextMessage(remoteJid,
+                        "📞 *Contacto*\n\n" +
+                                "¿A qué número desea que lo contactemos?\n\n" +
+                                "1. Usar el número desde el cual se comunica (" + remoteJid.split("@")[0] + ")\n" +
+                                "2. Ingresar otro número");
+
+            } else if (selection == diplos.size() + 3) {
                 userSessionService.clearUserState(remoteJid);
                 evolutionApiService.sendTextMessage(remoteJid,
                         "👋🏻 ¡Hasta Luego! Gracias por contactarte con nosotros.\n\n" +
                                 "☎️ Ante consultas particulares o necesidad de asesoramiento personalizado, podés indicarnos días y horarios de contacto.");
             } else {
                 evolutionApiService.sendTextMessage(remoteJid,
-                        "⚠️ Opción no válida. Por favor, ingrese un número del 1 al " + (diplos.size() + 1) + ".");
+                        "⚠️ Opción no válida. Por favor, ingrese un número del 1 al " + (diplos.size() + 3) + ".");
             }
         } catch (NumberFormatException e) {
             evolutionApiService.sendTextMessage(remoteJid,

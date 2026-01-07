@@ -1,9 +1,11 @@
 import React from 'react';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Users } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, MessageSquare, HelpCircle } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import DiplomaturaList from './components/DiplomaturaList';
 import SubscriptionList from './components/SubscriptionList';
+import ConsultationList from './components/ConsultationList';
+import FAQManager from './components/FAQManager';
 
 function App() {
     const location = useLocation();
@@ -30,6 +32,14 @@ function App() {
                         <Users size={20} />
                         Inscripciones
                     </Link>
+                    <Link to="/consultations" className={`flex items-center gap-3 p-3 rounded mb-2 hover:bg-blue-700 ${isActive('/consultations')}`}>
+                        <MessageSquare size={20} />
+                        Consultas
+                    </Link>
+                    <Link to="/faqs" className={`flex items-center gap-3 p-3 rounded mb-2 hover:bg-blue-700 ${isActive('/faqs')}`}>
+                        <HelpCircle size={20} />
+                        Preguntas Frecuentes
+                    </Link>
                 </nav>
             </div>
 
@@ -39,6 +49,8 @@ function App() {
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/diplomaturas" element={<DiplomaturaList />} />
                     <Route path="/subscriptions" element={<SubscriptionList />} />
+                    <Route path="/consultations" element={<ConsultationList />} />
+                    <Route path="/faqs" element={<FAQManager />} />
                 </Routes>
             </div>
         </div>
