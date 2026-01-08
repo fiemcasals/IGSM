@@ -237,32 +237,26 @@ public class WebhookController {
                 if ("WAITING_MESSAGE_BODY".equals(currentState)) {
                     String contactPhone = userSessionService.getSessionData(remoteJid, "contact_phone");
 
-                    try {
-                        // Extract messageId safely
-                        String msgId = null;
-                        if (key != null && key.containsKey("id")) {
-                            msgId = (String) key.get("id");
-                        }
-
-                        com.igsm.chatbot.model.Consultation consultation = new com.igsm.chatbot.model.Consultation();
-                        consultation.setUserId(remoteJid);
-                        consultation.setContactPhone(contactPhone);
-                        consultation.setMessage(text);
-                        consultation.setMessageId(msgId);
-
-                        consultationRepository.save(consultation);
-
-                        userSessionService.clearUserState(remoteJid);
-                        evolutionApiService.sendTextMessage(remoteJid,
-                                "✅ *¡Mensaje recibido!*\n\n" +
-                                        "Un representante se pondrá en contacto con usted a la brevedad al número: "
-                                        + contactPhone + ".\n\n" +
-                                        "¡Muchas gracias!");
-                    } catch (Exception e) {
-                        logger.error("❌ Error saving consultation for {}: {}", remoteJid, e.getMessage(), e);
-                        evolutionApiService.sendTextMessage(remoteJid,
-                                "⚠️ Hubo un error al guardar su consulta. Por favor, intente nuevamente.");
+                    // Extract messageId safely
+                    String msgId = null;
+                    if (key != null && key.containsKey("id")) {
+                        msgId = (String) key.get("id");
                     }
+
+                    com.igsm.chatbot.model.Consultation consultation = new com.igsm.chatbot.model.Consultation();
+                    consultation.setUserId(remoteJid);
+                    consultation.setContactPhone(contactPhone);
+                    consultation.setMessage(text);
+                    consultation.setMessageId(msgId);
+
+                    consultationRepository.save(consultation);
+
+                    userSessionService.clearUserState(remoteJid);
+                    evolutionApiService.sendTextMessage(remoteJid,
+                            "✅ *¡Mensaje recibido!*\n\n" +
+                                    "Un representante se pondrá en contacto con usted a la brevedad al número: "
+                                    + contactPhone + ".\n\n" +
+                                    "¡Muchas gracias!");
                     return;
                 }
 
@@ -304,9 +298,12 @@ public class WebhookController {
     }
 
     private String toTitleCase(String input) {
-        if (input == null || input.isEmpty()) {
-            return input;
-        }
+        i (inpt
+
+     == null || 
+    n
+        return input;
+    }
         StringBuilder titleCase = new StringBuilder();
         boolean nextTitleCase = true;
 
