@@ -195,37 +195,32 @@ public class WebhookController {
                 if ("WAITING_MESSAGE_BODY".equals(currentState)) {
                     String contactPhone = userSessionService.getSessionData(remoteJid, "contact_phone");
 
-                    com.igsm.chatbot.model.Consultation consultation = new com.igsm.chatbot.model.Consultation();
-                    consultation.setUserId(remoteJid);
-                    consultation.setContactPhone(contactPhone);
-                    consultation.setMessage(text);
+                    try {
+                        // Extract messageId safely
+                        String msgId = null;
+                        if (key != null && key.containsKey("id")) {
+                            msgId = (String) key.get("id");
+                        }
 
-                    // Extract messageId from the key map which should be available in scope
-                    // We need to ensure we have access to the message ID here.
-                    // Since I cannot see the full scope in the previous view, I will assume I need
-                    // to extract it again or it is available.
-                    // Actually, looking at the previous view, 'key' is defined at the top of the
-                    // method.
-                    // But to be safe and clean, I should probably capture it earlier.
-                    // Let's assume I can access 'key' if it's in the same method.
-                    // Wait, I need to see if 'key' is final or effectively final to be used if this
-                    // was a lambda, but it's a simple if block.
-                    // However, I didn't see the variable 'key' being passed to a helper method,
-                    // this is all one big method?
-                    // Yes, it seems so.
+                        com.igsm.chatbot.model.Consultation consultation = new com.igsm.chatbot.model.Consultation();
+                        consultation.setUserId(remoteJid);
+                        consultation.setContactPhone(contactPhone);
+                        consultation.setMessage(text);
+                        consultation.setMessageId(msgId);
 
-                    // Let's check if I can just use 'key.get("id")'.
-                    // I'll add a line to extract messageId at the top and then use it here.
-                    consultation.setMessageId((String) key.get("id"));
+                        consultationRepository.save(consultation);
 
-                    consultationRepository.save(consultation);
-
-                    userSessionService.clearUserState(remoteJid);
-                    evolutionApiService.sendTextMessage(remoteJid,
-                            "✅ *¡Mensaje recibido!*\n\n" +
-                                    "Un representante se pondrá en contacto con usted a la brevedad al número: "
-                                    + contactPhone + ".\n\n" +
-                                    "¡Muchas gracias!");
+                        userSessionService.clearUserState(remoteJid);
+                        evolutionApiService.sendTextMessage(remoteJid,
+                                "✅ *¡Mensaje recibido!*\n\n" +
+                                        "Un representante se pondrá en contacto con usted a la brevedad al número: "
+                                        + contactPhone + ".\n\n" +
+                                        "¡Muchas gracias!");
+                    } catch (Exception e) {
+                        logger.error("❌ Error saving consultation for {}: {}", remoteJid, e.getMessage(), e);
+                        evolutionApiService.sendTextMessage(remoteJid,
+                                "⚠️ Hubo un error al guardar su consulta. Por favor, intente nuevamente.");
+                    }
                     return;
                 }
 
