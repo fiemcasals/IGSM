@@ -33,13 +33,29 @@ public class ConsultationController {
 
     @PostMapping("/{id}/reply")
     public void replyToConsultation(@PathVariable Long id, @RequestBody Map<String, String> payload) {
-        Consultation consultation = consultationRepository.findById(id).orElseThrow();
+        Consultation originalConsultation = consultationRepository.findById(id).orElseThrow();
         String message = payload.get("message");
 
         if (message != null && !message.isEmpty()) {
-            evolutionApiService.sendTextMessage(consultation.getUserId(), message);
-            consultation.setReplied(true);
-            consultationRepository.save(consultation);
+            // 1. Send message via Evolution API with quote
+            String fullMessage = message
+                    + "\n\n📝 *Para continuar esta conversación, simplemente responda a este mensaje.*";
+            evolutionApiService.sendTextWithQuote(originalConsultation.getUserId(), fullMessage,
+                    originalConsultation.getMessageId());
+
+            // 2. Save Admin Reply as a new Consultation record
+            Consultation adminReply = new Consultation();
+            adminReply.setUserId(originalConsultation.getUserId());
+            adminReply.setContactPhone(originalConsultation.getContactPhone()); // Keep same contact info
+            adminReply.setMessage(message); // Store just the reply text
+            adminReply.setAdminReply(true);
+            adminReply.setSeen(true); // Admin messages are seen by definition
+            adminReply.setReplied(true);
+            consultationRepository.save(adminReply);
+
+            // 3. Mark original as replied
+            originalConsultation.setReplied(true);
+            consultationRepository.save(originalConsultation);
         }
     }
 }

@@ -23,6 +23,9 @@ public class Consultation {
     private boolean seen = false;
     private boolean replied = false;
 
+    private String messageId;
+    private boolean isAdminReply = false;
+
     private LocalDateTime timestamp;
 
     @PrePersist

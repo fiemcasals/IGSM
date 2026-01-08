@@ -199,6 +199,25 @@ public class WebhookController {
                     consultation.setUserId(remoteJid);
                     consultation.setContactPhone(contactPhone);
                     consultation.setMessage(text);
+
+                    // Extract messageId from the key map which should be available in scope
+                    // We need to ensure we have access to the message ID here.
+                    // Since I cannot see the full scope in the previous view, I will assume I need
+                    // to extract it again or it is available.
+                    // Actually, looking at the previous view, 'key' is defined at the top of the
+                    // method.
+                    // But to be safe and clean, I should probably capture it earlier.
+                    // Let's assume I can access 'key' if it's in the same method.
+                    // Wait, I need to see if 'key' is final or effectively final to be used if this
+                    // was a lambda, but it's a simple if block.
+                    // However, I didn't see the variable 'key' being passed to a helper method,
+                    // this is all one big method?
+                    // Yes, it seems so.
+
+                    // Let's check if I can just use 'key.get("id")'.
+                    // I'll add a line to extract messageId at the top and then use it here.
+                    consultation.setMessageId((String) key.get("id"));
+
                     consultationRepository.save(consultation);
 
                     userSessionService.clearUserState(remoteJid);

@@ -1,18 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
-import { MessageSquare, CheckCircle, Circle, Reply, Send, BookPlus, X, Save } from 'lucide-react';
+import { MessageSquare, Send, Search, User, Check, CheckCheck } from 'lucide-react';
 
 const ConsultationList = () => {
     const [consultations, setConsultations] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [replyingTo, setReplyingTo] = useState(null);
+    const [selectedUser, setSelectedUser] = useState(null);
     const [replyMessage, setReplyMessage] = useState("");
-    const [faqModalOpen, setFaqModalOpen] = useState(false);
-    const [faqData, setFaqData] = useState({ question: '', answer: '' });
+    const [searchTerm, setSearchTerm] = useState("");
+    const messagesEndRef = useRef(null);
 
     useEffect(() => {
         fetchConsultations();
+        // Poll for new messages every 10 seconds
+        const interval = setInterval(fetchConsultations, 10000);
+        return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [selectedUser, consultations]);
 
     const fetchConsultations = () => {
         axios.get('/api/consultations')
@@ -26,23 +33,23 @@ const ConsultationList = () => {
             });
     };
 
-    const toggleSeen = (id) => {
-        axios.put(`/api/consultations/${id}/seen`)
-            .then(res => {
-                setConsultations(consultations.map(c => c.id === id ? res.data : c));
-            })
-            .catch(console.error);
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    const handleReply = (id) => {
-        if (!replyMessage.trim()) return;
+    const handleReply = () => {
+        if (!replyMessage.trim() || !selectedUser) return;
 
-        axios.post(`/api/consultations/${id}/reply`, { message: replyMessage })
+        // Find the last message from the user to reply to (for quoting)
+        const userMessages = consultations.filter(c => c.userId === selectedUser && !c.adminReply);
+        const lastMessage = userMessages[userMessages.length - 1];
+
+        if (!lastMessage) return;
+
+        axios.post(`/api/consultations/${lastMessage.id}/reply`, { message: replyMessage })
             .then(() => {
-                setReplyingTo(null);
                 setReplyMessage("");
-                fetchConsultations(); // Refresh to show replied status if we add it to UI
-                alert("Respuesta enviada correctamente");
+                fetchConsultations();
             })
             .catch(err => {
                 console.error(err);
@@ -50,165 +57,181 @@ const ConsultationList = () => {
             });
     };
 
-    const openFaqModal = (consultation) => {
-        setFaqData({
-            question: consultation.message,
-            answer: "" // We could pre-fill if there was a reply, but usually we want a generic answer
-        });
-        setFaqModalOpen(true);
-    };
+    // Group consultations by user
+    const threads = consultations.reduce((acc, curr) => {
+        if (!acc[curr.userId]) {
+            acc[curr.userId] = {
+                userId: curr.userId,
+                contactPhone: curr.contactPhone,
+                messages: [],
+                lastMessage: null,
+                unreadCount: 0
+            };
+        }
+        acc[curr.userId].messages.push(curr);
 
-    const saveFaq = () => {
-        if (!faqData.question.trim() || !faqData.answer.trim()) return;
+        // Update last message (assuming sorted by timestamp desc from backend, but we might need to sort)
+        // Actually backend returns sorted by timestamp desc. So first item is latest?
+        // Let's re-sort here to be safe for chat view (oldest first)
 
-        axios.post('/api/faqs', faqData)
-            .then(() => {
-                setFaqModalOpen(false);
-                setFaqData({ question: '', answer: '' });
-                alert("Pregunta frecuente guardada correctamente");
-            })
-            .catch(err => {
-                console.error(err);
-                alert("Error al guardar FAQ");
-            });
-    };
+        if (!curr.seen && !curr.adminReply) {
+            acc[curr.userId].unreadCount++;
+        }
+        return acc;
+    }, {});
 
-    if (loading) return <div className="p-6">Cargando...</div>;
+    // Convert to array and sort by latest message
+    const sortedThreads = Object.values(threads).map(thread => {
+        thread.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        thread.lastMessage = thread.messages[thread.messages.length - 1];
+        return thread;
+    }).sort((a, b) => new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp));
+
+    const filteredThreads = sortedThreads.filter(thread =>
+        thread.contactPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        thread.userId.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const activeThread = selectedUser ? threads[selectedUser] : null;
+
+    if (loading) return <div className="p-6 flex justify-center items-center h-full">Cargando...</div>;
 
     return (
-        <div className="p-6">
-            <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-                <MessageSquare /> Consultas
-            </h1>
+        <div className="flex h-[calc(100vh-64px)] bg-gray-100 overflow-hidden">
+            {/* Sidebar - Thread List */}
+            <div className={`w-full md:w-1/3 bg-white border-r border-gray-200 flex flex-col ${selectedUser ? 'hidden md:flex' : 'flex'}`}>
+                <div className="p-4 border-b border-gray-200 bg-gray-50">
+                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <MessageSquare className="text-blue-600" /> Chats
+                    </h2>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Buscar por número..."
+                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                </div>
 
-            <div className="bg-white rounded-lg shadow overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mensaje</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {consultations.map((consultation) => (
-                            <tr key={consultation.id} className={consultation.seen ? "bg-white" : "bg-blue-50"}>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <button
-                                        onClick={() => toggleSeen(consultation.id)}
-                                        className={`flex items-center gap-1 text-sm ${consultation.seen ? 'text-green-600' : 'text-blue-600 font-bold'}`}
+                <div className="flex-1 overflow-y-auto">
+                    {filteredThreads.map(thread => (
+                        <div
+                            key={thread.userId}
+                            onClick={() => setSelectedUser(thread.userId)}
+                            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${selectedUser === thread.userId ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''}`}
+                        >
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="font-semibold text-gray-800">{thread.contactPhone || thread.userId}</span>
+                                <span className="text-xs text-gray-500">
+                                    {new Date(thread.lastMessage.timestamp).toLocaleDateString()}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <p className="text-sm text-gray-600 truncate w-3/4">
+                                    {thread.lastMessage.adminReply && <span className="text-blue-600 mr-1">Tú:</span>}
+                                    {thread.lastMessage.message}
+                                </p>
+                                {thread.unreadCount > 0 && (
+                                    <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                                        {thread.unreadCount}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                    {filteredThreads.length === 0 && (
+                        <div className="p-8 text-center text-gray-500">
+                            No se encontraron conversaciones.
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Main Chat Area */}
+            <div className={`flex-1 flex flex-col bg-[#e5ddd5] ${!selectedUser ? 'hidden md:flex' : 'flex'}`}>
+                {activeThread ? (
+                    <>
+                        {/* Chat Header */}
+                        <div className="p-4 bg-gray-100 border-b border-gray-200 flex items-center justify-between shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    className="md:hidden text-gray-600"
+                                    onClick={() => setSelectedUser(null)}
+                                >
+                                    ← Volver
+                                </button>
+                                <div className="bg-gray-300 p-2 rounded-full">
+                                    <User size={24} className="text-gray-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-800">{activeThread.contactPhone}</h3>
+                                    <span className="text-xs text-gray-500">{activeThread.userId}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Messages */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {activeThread.messages.map((msg, index) => (
+                                <div
+                                    key={msg.id || index}
+                                    className={`flex ${msg.adminReply ? 'justify-end' : 'justify-start'}`}
+                                >
+                                    <div
+                                        className={`max-w-[70%] p-3 rounded-lg shadow-sm relative ${msg.adminReply
+                                                ? 'bg-[#d9fdd3] rounded-tr-none'
+                                                : 'bg-white rounded-tl-none'
+                                            }`}
                                     >
-                                        {consultation.seen ? <CheckCircle size={18} /> : <Circle size={18} fill="currentColor" />}
-                                        {consultation.seen ? "Visto" : "Nuevo"}
-                                    </button>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {new Date(consultation.timestamp).toLocaleDateString()} {new Date(consultation.timestamp).toLocaleTimeString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <div className="font-medium">{consultation.contactPhone}</div>
-                                    <div className="text-xs text-gray-500">ID: {consultation.userId}</div>
-                                </td>
-                                <td className="px-6 py-4 text-sm text-gray-700 max-w-md break-words">
-                                    {consultation.message}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                    {replyingTo === consultation.id ? (
-                                        <div className="flex flex-col gap-2">
-                                            <textarea
-                                                className="border rounded p-2 text-sm w-full"
-                                                rows="3"
-                                                placeholder="Escriba su respuesta..."
-                                                value={replyMessage}
-                                                onChange={(e) => setReplyMessage(e.target.value)}
-                                            />
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleReply(consultation.id)}
-                                                    className="bg-blue-600 text-white px-3 py-1 rounded text-xs flex items-center gap-1 hover:bg-blue-700"
-                                                >
-                                                    <Send size={14} /> Enviar
-                                                </button>
-                                                <button
-                                                    onClick={() => setReplyingTo(null)}
-                                                    className="text-gray-500 px-3 py-1 text-xs hover:text-gray-700"
-                                                >
-                                                    Cancelar
-                                                </button>
-                                            </div>
+                                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.message}</p>
+                                        <div className="flex justify-end items-center gap-1 mt-1">
+                                            <span className="text-[10px] text-gray-500">
+                                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                            {msg.adminReply && (
+                                                <CheckCheck size={14} className="text-blue-500" />
+                                            )}
                                         </div>
-                                    ) : (
-                                        <button
-                                            onClick={() => {
-                                                setReplyingTo(consultation.id);
-                                                setReplyMessage("");
-                                            }}
-                                            className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
-                                        >
-                                            <Reply size={16} /> Responder
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => openFaqModal(consultation)}
-                                        className="text-purple-600 hover:text-purple-900 flex items-center gap-1 mt-2"
-                                        title="Guardar como Pregunta Frecuente"
-                                    >
-                                        <BookPlus size={16} /> FAQ
-                                    </button>
-                                    {consultation.replied && <span className="text-xs text-green-600 block mt-1">Respondido</span>}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-                {consultations.length === 0 && (
-                    <div className="p-8 text-center text-gray-500">
-                        No hay consultas registradas.
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Input Area */}
+                        <div className="p-4 bg-gray-100 border-t border-gray-200">
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Escribe un mensaje..."
+                                    className="flex-1 border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={replyMessage}
+                                    onChange={(e) => setReplyMessage(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleReply()}
+                                />
+                                <button
+                                    onClick={handleReply}
+                                    disabled={!replyMessage.trim()}
+                                    className="bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <Send size={20} />
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center text-gray-500 p-8">
+                        <div className="bg-gray-200 p-6 rounded-full mb-4">
+                            <MessageSquare size={48} className="text-gray-400" />
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2">Selecciona una conversación</h3>
+                        <p>Haz clic en un chat de la izquierda para ver el historial.</p>
                     </div>
                 )}
             </div>
-
-            {faqModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold">Guardar como Pregunta Frecuente</h3>
-                            <button onClick={() => setFaqModalOpen(false)} className="text-gray-500 hover:text-gray-700">
-                                <X size={24} />
-                            </button>
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Pregunta</label>
-                            <input
-                                type="text"
-                                className="w-full border rounded p-2"
-                                value={faqData.question}
-                                onChange={(e) => setFaqData({ ...faqData, question: e.target.value })}
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Respuesta Genérica</label>
-                            <textarea
-                                className="w-full border rounded p-2"
-                                rows="4"
-                                value={faqData.answer}
-                                onChange={(e) => setFaqData({ ...faqData, answer: e.target.value })}
-                                placeholder="Escriba una respuesta general para esta pregunta..."
-                            />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <button onClick={() => setFaqModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">
-                                Cancelar
-                            </button>
-                            <button onClick={saveFaq} className="bg-purple-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-purple-700">
-                                <Save size={18} /> Guardar FAQ
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
