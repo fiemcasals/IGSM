@@ -298,12 +298,9 @@ public class WebhookController {
     }
 
     private String toTitleCase(String input) {
-        i (inpt
-
-     == null || 
-    n
-        return input;
-    }
+        if (input == null || input.isEmpty()) {
+            return input;
+        }
         StringBuilder titleCase = new StringBuilder();
         boolean nextTitleCase = true;
 
