@@ -2,15 +2,13 @@ package com.igsm.chatbot.service;
 
 import org.springframework.stereotype.Service;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class UserSessionService {
 
-    // Map<RemoteJid, CurrentState>
     private final Map<String, String> userStates = new ConcurrentHashMap<>();
-
-    // Map<RemoteJid, Map<Key, Value>>
     private final Map<String, Map<String, String>> userSessionData = new ConcurrentHashMap<>();
 
     public String getUserState(String remoteJid) {
@@ -19,6 +17,13 @@ public class UserSessionService {
 
     public void setUserState(String remoteJid, String state) {
         userStates.put(remoteJid, state);
+        // Cada vez que cambia el estado, registramos la hora de actividad
+        putSessionData(remoteJid, "last_activity", String.valueOf(System.currentTimeMillis()));
+    }
+
+    // --- NUEVO MÉTODO PARA EL CLEANUP SERVICE ---
+    public Map<String, String> getAllActiveStates() {
+        return new HashMap<>(userStates);
     }
 
     public void clearUserState(String remoteJid) {
