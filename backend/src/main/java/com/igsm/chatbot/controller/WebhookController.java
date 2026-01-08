@@ -58,13 +58,55 @@ public class WebhookController {
                 logger.info("📩 New Message from: {}, fromMe: {}", remoteJid, fromMe);
 
                 Map<String, Object> message = (Map<String, Object>) data.get("message");
-                String text = "";
-                if (message != null) {
-                    if (message.containsKey("conversation")) {
-                        text = (String) message.get("conversation");
-                    } else if (message.containsKey("extendedTextMessage")) {
-                        Map<String, Object> extended = (Map<String, Object>) message.get("extendedTextMessage");
-                        text = (String) extended.get("text");
+                }
+
+                // Extract messageId
+                String messageId = (String) key.get("id");
+                logger.info("   Message ID: {}", messageId);
+
+                // Check if it's a reply to a previous message
+                boolean isReply = false;
+                if (message != null && message.containsKey("extendedTextMessage")) {
+                    Map<String, Object> extended = (Map<String, Object>) message.get("extendedTextMessage");
+                    if (extended.containsKey("contextInfo")) {
+                        Map<String, Object> contextInfo = (Map<String, Object>) extended.get("contextInfo");
+                        if (contextInfo.containsKey("stanzaId")) {
+                            isReply = true;
+                            logger.info("↩️ Detected reply to message ID: {}", contextInfo.get("stanzaId"));
+                        }
+                    }
+                }
+
+                if (text == null) {
+                    logger.warn("⚠️ Text is null, ignoring message from {}", remoteJid);
+                    return;
+                }
+                text = text.trim();
+                logger.info("   Text: {}", text);
+
+                // Handle Replies as Consultations
+                if (isReply) {
+                    try {
+                        com.igsm.chatbot.model.Consultation consultation = new com.igsm.chatbot.model.Consultation();
+                        consultation.setUserId(remoteJid);
+                        // Try to find existing contact phone from previous consultations or session
+                        String contactPhone = userSessionService.getSessionData(remoteJid, "contact_phone");
+                        if (contactPhone == null) {
+                             // Fallback: use the sender's number if not found in session
+                             contactPhone = remoteJid.split("@")[0];
+                        }
+                        consultation.setContactPhone(contactPhone);
+                        consultation.setMessage(text);
+                        consultation.setMessageId(messageId);
+                        
+                        consultationRepository.save(consultation);
+                        logger.info("✅ Reply saved as consultation for {}", remoteJid);
+                        
+                        // Optional: Confirm receipt or stay silent to simulate chat
+                        // evolutionApiService.sendTextMessage(remoteJid, "✅"); 
+                        return; 
+                    } catch (Exception e) {
+                        logger.error("❌ Error saving reply consultation: {}", e.getMessage());
                     }
                 }
 

@@ -24,7 +24,7 @@ public class Consultation {
     private boolean replied = false;
 
     private String messageId;
-    private boolean isAdminReply = false;
+    private Boolean isAdminReply = false;
 
     private LocalDateTime timestamp;
 
