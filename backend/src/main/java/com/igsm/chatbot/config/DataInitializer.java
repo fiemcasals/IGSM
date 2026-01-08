@@ -30,9 +30,30 @@ public class DataInitializer {
                         deleteDiploIfExists(repository, "MEDIO AMBIENTE");
                         deleteDiploIfExists(repository, "DIPLOMATURA EN PRODUCTOS ALIMENTICIOS");
 
+                        // Remove Uppercase Duplicates
+                        deleteDiploIfExists(repository, "PROFESORADO EN DOCENCIA SUPERIOR");
+                        deleteDiploIfExists(repository, "TECNICATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO");
+                        deleteDiploIfExists(repository, "TECNICATURA EN ADMINISTRACION CON ORIENTACION EN MARKETING");
+                        deleteDiploIfExists(repository, "LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN DESARROLLO DE SOFTWARE");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN TECNOLOGIAS AGROPECUARIAS");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN BROMATOLOGIA");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN ENERGIAS RENOVABLES");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN GESTION DE RIESGOS");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN MOLDES Y MATRICES");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN AGRICULTURA DE PRECISION");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN HIDROCARBUROS");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN DISEÑO E IMPRESION 3D");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN ROBOTICA");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN CIENCIA DE DATOS E INTELIGENCIA ARTIFICIAL");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN FIBRA OPTICA");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN MEDIO AMBIENTE");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN DESARROLLO WEB");
+                        deleteDiploIfExists(repository, "DIPLOMATURA EN INDUSTRIAS ALIMENTARIAS");
+
                         // --- CARRERAS ---
 
-                        createOrUpdateDiplo(repository, "PROFESORADO EN DOCENCIA SUPERIOR",
+                        createOrUpdateDiplo(repository, "Profesorado en Docencia Superior",
                                         "Ciclo de complementación pedagógica curricular.",
                                         "👨‍🏫 *PROFESORADO EN DOCENCIA SUPERIOR*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Ciclo de complementación pedagógica curricular. Conforme la Resolución N° 12767/97, el título que se otorga, habilita ingresar al sistema educativo público de la Provincia de Buenos Aires, facultando a los inscriptos/as a tomar cargos/módulos y/o horas cátedra en las instituciones educativas bonaerenses. Permite el ejercicio de la docencia en el listado oficial o 108A.\n"
@@ -51,7 +72,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "TECNICATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO",
+                        createOrUpdateDiplo(repository, "Tecnicatura en Higiene y Seguridad en el Trabajo",
                                         "Tecnicatura en Higiene y Seguridad.",
                                         "👷 *TECNICATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* \n" +
@@ -66,7 +87,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "TECNICATURA EN ADMINISTRACION CON ORIENTACION EN MARKETING",
+                        createOrUpdateDiplo(repository, "Tecnicatura en Administración con Orientación en Marketing",
                                         "Tecnicatura en Administración y Marketing.",
                                         "📈 *TECNICATURA EN ADMINISTRACION CON ORIENTACION EN MARKETING*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* \n" +
@@ -81,7 +102,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO",
+                        createOrUpdateDiplo(repository, "Licenciatura en Higiene y Seguridad en el Trabajo",
                                         "Licenciatura en Higiene y Seguridad.",
                                         "🎓 *LICENCIATURA EN HIGIENE Y SEGURIDAD EN EL TRABAJO*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* \n" +
@@ -98,7 +119,7 @@ public class DataInitializer {
 
                         // --- DIPLOMATURAS ---
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN DESARROLLO DE SOFTWARE",
+                        createOrUpdateDiplo(repository, "Diplomatura en Desarrollo de Software",
                                         "Formación práctica en desarrollo de software.",
                                         "💻 *DIPLOMATURA EN DESARROLLO DE SOFTWARE*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Formación práctica en desarrollo de software, estructuras de datos y algoritmos.\n"
@@ -115,7 +136,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN TECNOLOGIAS AGROPECUARIAS",
+                        createOrUpdateDiplo(repository, "Diplomatura en Tecnologías Agropecuarias",
                                         "Robótica y automatización agrícola.",
                                         "🚜 *DIPLOMATURA EN TECNOLOGIAS AGROPECUARIAS*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Aplicar robótica y automatización para mejorar productividad y sostenibilidad agrícola.\n"
@@ -132,7 +153,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN BROMATOLOGIA",
+                        createOrUpdateDiplo(repository, "Diplomatura en Bromatología",
                                         "Seguridad y calidad alimentaria.",
                                         "🍎 *DIPLOMATURA EN BROMATOLOGIA*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Garantizar seguridad, calidad e inocuidad en la industria alimentaria.\n"
@@ -149,7 +170,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN ENERGIAS RENOVABLES",
+                        createOrUpdateDiplo(repository, "Diplomatura en Energías Renovables",
                                         "Energías renovables.",
                                         "☀️ *DIPLOMATURA EN ENERGIAS RENOVABLES*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Formación científico-tecnológica para la inserción laboral en el sector de energías renovables.\n"
@@ -166,7 +187,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN GESTION DE RIESGOS",
+                        createOrUpdateDiplo(repository, "Diplomatura en Gestión de Riesgos",
                                         "Gestión de riesgos.",
                                         "⚠️ *DIPLOMATURA EN GESTION DE RIESGOS*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* \n" +
@@ -182,7 +203,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN MOLDES Y MATRICES",
+                        createOrUpdateDiplo(repository, "Diplomatura en Moldes y Matrices",
                                         "Moldes y matrices.",
                                         "⚙️ *DIPLOMATURA EN MOLDES Y MATRICES*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* \n" +
@@ -198,7 +219,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN AGRICULTURA DE PRECISION",
+                        createOrUpdateDiplo(repository, "Diplomatura en Agricultura de Precisión",
                                         "Agricultura de precisión.",
                                         "🛰️ *DIPLOMATURA EN AGRICULTURA DE PRECISION*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Aplicar tecnologías avanzadas para optimizar recursos y productividad agropecuaria.\n"
@@ -215,7 +236,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN HIDROCARBUROS",
+                        createOrUpdateDiplo(repository, "Diplomatura en Hidrocarburos",
                                         "Sector de hidrocarburos.",
                                         "🛢️ *DIPLOMATURA EN HIDROCARBUROS*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Introducción integral al sector, desde exploración hasta producción, aspectos técnicos y ambientales.\n"
@@ -232,7 +253,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN DISEÑO E IMPRESION 3D",
+                        createOrUpdateDiplo(repository, "Diplomatura en Diseño e Impresión 3D",
                                         "Diseño e impresión 3D.",
                                         "🖨️ *DIPLOMATURA EN DISEÑO E IMPRESION 3D*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Modelado 3D de componentes y conjuntos utilizando software profesional.\n"
@@ -249,7 +270,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN ROBOTICA",
+                        createOrUpdateDiplo(repository, "Diplomatura en Robótica",
                                         "Robótica.",
                                         "🤖 *DIPLOMATURA EN ROBOTICA*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Diseño, programación e implementación de sistemas robóticos y automatización.\n"
@@ -266,7 +287,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN CIENCIA DE DATOS E INTELIGENCIA ARTIFICIAL",
+                        createOrUpdateDiplo(repository, "Diplomatura en Ciencia de Datos e Inteligencia Artificial",
                                         "Ciencia de datos e IA.",
                                         "🧠 *DIPLOMATURA EN CIENCIA DE DATOS E INTELIGENCIA ARTIFICIAL*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* \n" +
@@ -282,7 +303,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN FIBRA OPTICA",
+                        createOrUpdateDiplo(repository, "Diplomatura en Fibra Óptica",
                                         "Fibra óptica.",
                                         "📡 *DIPLOMATURA EN FIBRA OPTICA*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* \n" +
@@ -298,7 +319,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN MEDIO AMBIENTE",
+                        createOrUpdateDiplo(repository, "Diplomatura en Medio Ambiente",
                                         "Medio ambiente.",
                                         "🌍 *DIPLOMATURA EN MEDIO AMBIENTE*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Detectar y diagnosticar problemas ambientales, preservación sustentable de recursos.\n"
@@ -315,7 +336,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN DESARROLLO WEB",
+                        createOrUpdateDiplo(repository, "Diplomatura en Desarrollo Web",
                                         "Desarrollo Web.",
                                         "🌐 *DIPLOMATURA EN DESARROLLO WEB*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Formar recursos capacitados en el desarrollo de soluciones web, capaces de crear, implementar y optimizar aplicaciones y sitios web modernos, utilizando tecnologías y metodologías actuales en el campo del desarrollo web.\n"
@@ -332,7 +353,7 @@ public class DataInitializer {
                                                         +
                                                         "🌐 Para conocer más detalles de la carrera: (pegar link del sitio web)");
 
-                        createOrUpdateDiplo(repository, "DIPLOMATURA EN INDUSTRIAS ALIMENTARIAS",
+                        createOrUpdateDiplo(repository, "Diplomatura en Industrias Alimentarias",
                                         "Industrias alimentarias.",
                                         "🥫 *DIPLOMATURA EN INDUSTRIAS ALIMENTARIAS*\n\n" +
                                                         "🎯 *Objetivo/Perfil:* Brindar una formación técnica y práctica en la producción de alimentos, el control de procesos y la aplicación de normas de calidad vigentes.\n"
