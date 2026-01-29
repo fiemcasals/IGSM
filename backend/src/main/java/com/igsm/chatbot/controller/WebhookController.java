@@ -215,7 +215,7 @@ public class WebhookController {
             userSessionService.putSessionData(remoteJid, "submenu_option_" + (i + 1),
                     String.valueOf(filtered.get(i).getId()));
         }
-        menu.append("\n0️⃣ *Volver al Menú Principal / Anterior*"); // Estilo unificado
+        menu.append("\n0️⃣ *Volver al Menú Principal*"); // Estilo unificado
 
         evolutionApiService.sendTextMessage(remoteJid, menu.toString());
 
