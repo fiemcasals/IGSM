@@ -178,17 +178,28 @@ public class WebhookController {
         Map<String, List<com.igsm.chatbot.model.Diplomatura>> grouped = allDiplos.stream()
                 .collect(Collectors.groupingBy(d -> d.getType() != null ? d.getType().toUpperCase() : "OTROS"));
 
-        List<String> orderedTypes = List.of("DIPLOMATURA", "TECNICATURA", "LICENCIATURA", "PROFESORADO", "OTROS");
+        // 1. Diplomaturas
         int index = 1;
-        for (String type : orderedTypes) {
-            if (grouped.containsKey(type)) {
-                if (type.equals("PROFESORADO") && grouped.containsKey("LICENCIATURA"))
-                    continue;
-                menu.append(index).append(". ").append(getDisplayName(type)).append("\n");
-                userSessionService.putSessionData(remoteJid, "menu_option_" + index, "TYPE:" + type);
-                index++;
-            }
+        if (grouped.containsKey("DIPLOMATURA")) {
+            menu.append(index).append(". Diplomaturas\n");
+            userSessionService.putSessionData(remoteJid, "menu_option_" + index, "TYPE:DIPLOMATURA");
+            index++;
         }
+
+        // 2. Tecnicaturas
+        if (grouped.containsKey("TECNICATURA")) {
+            menu.append(index).append(". Tecnicaturas\n");
+            userSessionService.putSessionData(remoteJid, "menu_option_" + index, "TYPE:TECNICATURA");
+            index++;
+        }
+
+        // 3. Licenciatura y Tramo docente
+        if (grouped.containsKey("LICENCIATURA") || grouped.containsKey("PROFESORADO")) {
+            menu.append(index).append(". Licenciatura y Tramo docente\n");
+            userSessionService.putSessionData(remoteJid, "menu_option_" + index, "TYPE:LIC_PROF");
+            index++;
+        }
+
         menu.append(index).append(". Deje su mensaje a un representante\n");
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:CONTACT");
         index++;
@@ -199,10 +210,22 @@ public class WebhookController {
     }
 
     private void showSubmenu(String remoteJid, String type) {
-        List<com.igsm.chatbot.model.Diplomatura> filtered = diplomaturaRepository.findAll().stream()
-                .filter(d -> d.getType() != null && d.getType().equalsIgnoreCase(type))
-                .sorted(Comparator.comparing(com.igsm.chatbot.model.Diplomatura::getName))
-                .collect(Collectors.toList());
+        List<com.igsm.chatbot.model.Diplomatura> filtered;
+
+        if ("LIC_PROF".equals(type)) {
+            filtered = diplomaturaRepository.findAll().stream()
+                    .filter(d -> d.getType() != null && (d.getType().equalsIgnoreCase("LICENCIATURA")
+                            || d.getType().equalsIgnoreCase("PROFESORADO")))
+                    .sorted(Comparator.comparing(com.igsm.chatbot.model.Diplomatura::getName))
+                    .collect(Collectors.toList());
+            type = "Licenciatura y Tramo docente"; // Para el título
+        } else {
+            String finalType = type;
+            filtered = diplomaturaRepository.findAll().stream()
+                    .filter(d -> d.getType() != null && d.getType().equalsIgnoreCase(finalType))
+                    .sorted(Comparator.comparing(com.igsm.chatbot.model.Diplomatura::getName))
+                    .collect(Collectors.toList());
+        }
 
         userSessionService.setUserState(remoteJid, "WAITING_SUBMENU_SELECTION");
         userSessionService.putSessionData(remoteJid, "current_category_type", type);
@@ -218,7 +241,6 @@ public class WebhookController {
         menu.append("\n0️⃣ *Volver al Menú Principal*"); // Estilo unificado
 
         evolutionApiService.sendTextMessage(remoteJid, menu.toString());
-
     }
 
     // --- MÉTODOS DE APOYO MANTENIDOS ---
@@ -265,7 +287,7 @@ public class WebhookController {
 
     private void exitConversation(String jid) {
         userSessionService.clearUserState(jid);
-        evolutionApiService.sendTextMessage(jid, "¡Hasta luego!");
+        evolutionApiService.sendTextMessage(jid, "👋🏻¡Hasta Luego! Gracias por contactarte con nosotros. IGSM - UTN");
     }
 
     private String getDisplayName(String type) {
