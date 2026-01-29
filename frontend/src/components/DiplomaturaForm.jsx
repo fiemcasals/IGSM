@@ -39,21 +39,6 @@ const DiplomaturaForm = ({ diplomatura, onSave, onCancel }) => {
                         />
                     </div>
                     <div className="mb-4">
-                        <label className="block text-sm font-medium mb-1">Tipo</label>
-                        <select
-                            name="type"
-                            value={formData.type || 'DIPLOMATURA'}
-                            onChange={handleChange}
-                            className="w-full border rounded p-2"
-                        >
-                            <option value="DIPLOMATURA">Diplomatura</option>
-                            <option value="TECNICATURA">Tecnicatura</option>
-                            <option value="LICENCIATURA">Licenciatura</option>
-                            <option value="PROFESORADO">Profesorado</option>
-                            <option value="OTROS">Otros</option>
-                        </select>
-                    </div>
-                    <div className="mb-4">
                         <label className="block text-sm font-medium mb-1">Descripción (Corta)</label>
                         <input
                             type="text"

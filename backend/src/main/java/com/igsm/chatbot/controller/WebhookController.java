@@ -49,17 +49,16 @@ public class WebhookController {
                 return;
             text = text.trim();
 
-            // 1. Si es un REPLY (respuesta a un mensaje), guardar como consulta y salir
+            userSessionService.putSessionData(remoteJid, "last_activity", String.valueOf(System.currentTimeMillis()));
+
             if (esRespuesta(message)) {
                 saveReplyAsConsultation(remoteJid, text, messageId);
                 return;
             }
 
-            // 2. Si el mensaje es nuestro, ignorar (a menos que sea INFO para testeo)
             if (fromMe && !text.equalsIgnoreCase("INFO"))
                 return;
 
-            // 3. Comandos globales de salida/inicio
             if (text.equalsIgnoreCase("GRACIAS") || text.equals("99")) {
                 exitConversation(remoteJid);
                 return;
@@ -70,33 +69,11 @@ public class WebhookController {
                 return;
             }
 
-            // 4. Lógica de SILENCIO:
-            // Solo procesamos el texto si el usuario YA ESTÁ en un estado del bot.
             String currentState = userSessionService.getUserState(remoteJid);
-
-            if (currentState != null && !currentState.isEmpty()) {
-                procesarEstado(remoteJid, text, currentState, messageId);
-            } else {
-                // Si no hay estado y no escribió INFO, el bot NO responde.
-                logger.info("Mensaje ignorado (Usuario fuera de flujo): {}", text);
-            }
+            procesarEstado(remoteJid, text, currentState, messageId);
 
         } catch (Exception e) {
             logger.error("⚠️ Error en webhook: {}", e.getMessage());
-        }
-    }
-
-    private void procesarEstado(String remoteJid, String text, String state, String msgId) {
-        if ("WAITING_MAIN_MENU_SELECTION".equals(state)) {
-            handleMainMenuSelection(remoteJid, text);
-        } else if ("WAITING_SUBMENU_SELECTION".equals(state)) {
-            handleSubmenuSelection(remoteJid, text);
-        } else if ("WAITING_CONTACT_CHOICE".equals(state)) {
-            handleContactChoice(remoteJid, text);
-        } else if ("WAITING_CONTACT_NUMBER".equals(state)) {
-            handleContactNumber(remoteJid, text);
-        } else if ("WAITING_MESSAGE_BODY".equals(state)) {
-            saveReplyAsConsultation(remoteJid, text, msgId);
         }
     }
 
@@ -117,6 +94,22 @@ public class WebhookController {
             return false;
         Map<String, Object> ext = (Map<String, Object>) message.get("extendedTextMessage");
         return ext.containsKey("contextInfo") && ((Map<String, Object>) ext.get("contextInfo")).containsKey("stanzaId");
+    }
+
+    private void procesarEstado(String remoteJid, String text, String state, String msgId) {
+        if ("WAITING_MAIN_MENU_SELECTION".equals(state))
+            handleMainMenuSelection(remoteJid, text);
+        else if ("WAITING_SUBMENU_SELECTION".equals(state))
+            handleSubmenuSelection(remoteJid, text);
+        else if ("WAITING_CONTACT_CHOICE".equals(state))
+            handleContactChoice(remoteJid, text);
+        else if ("WAITING_CONTACT_NUMBER".equals(state))
+            handleContactNumber(remoteJid, text);
+        else if ("WAITING_MESSAGE_BODY".equals(state))
+            saveReplyAsConsultation(remoteJid, text, msgId);
+        else {
+            showMainMenu(remoteJid);
+        }
     }
 
     private void handleMainMenuSelection(String remoteJid, String text) {
@@ -180,12 +173,12 @@ public class WebhookController {
         userSessionService.removeSessionData(remoteJid, "is_viewing_detail");
 
         StringBuilder menu = new StringBuilder(
-                "Hola! Bienvenido a nuestro asistente virtual 👋🏻\nPara conocer nuestra oferta académica, realizar preinscripciones, u obtener información, selecciona el número correspondiente de tu interés\n\n");
+                "Bienvenido a nuestro asistente virtual 👋🏻\nSelecciona una opción:\n\n");
         List<com.igsm.chatbot.model.Diplomatura> allDiplos = diplomaturaRepository.findAll();
         Map<String, List<com.igsm.chatbot.model.Diplomatura>> grouped = allDiplos.stream()
                 .collect(Collectors.groupingBy(d -> d.getType() != null ? d.getType().toUpperCase() : "OTROS"));
 
-        List<String> orderedTypes = List.of("DIPLOMATURA", "TECNICATURA", "LICENCIATURA", "PROFESORADO");
+        List<String> orderedTypes = List.of("DIPLOMATURA", "TECNICATURA", "LICENCIATURA", "PROFESORADO", "OTROS");
         int index = 1;
         for (String type : orderedTypes) {
             if (grouped.containsKey(type)) {
@@ -238,16 +231,10 @@ public class WebhookController {
     private void handleContactChoice(String jid, String text) {
         if ("1".equals(text)) {
             userSessionService.setUserState(jid, "WAITING_MESSAGE_BODY");
-            // Agregamos la instrucción de salida
-            evolutionApiService.sendTextMessage(jid,
-                    "Escriba su consulta:\n\n_(En cualquier momento envíe *0* para volver al menú)_");
+            evolutionApiService.sendTextMessage(jid, "Escriba su consulta:");
         } else if ("2".equals(text)) {
             userSessionService.setUserState(jid, "WAITING_CONTACT_NUMBER");
             evolutionApiService.sendTextMessage(jid, "Ingrese el número:");
-        } else {
-            // Si escribe cualquier otra cosa, le mostramos las opciones de nuevo
-            evolutionApiService.sendTextMessage(jid,
-                    "⚠️ Opción no válida.\n\n📞 *Contacto*\n1. Usar mi número\n2. Ingresar otro");
         }
     }
 
@@ -262,23 +249,13 @@ public class WebhookController {
             String cp = userSessionService.getSessionData(remoteJid, "contact_phone");
             if (cp == null)
                 cp = remoteJid.split("@")[0];
-
             com.igsm.chatbot.model.Consultation c = new com.igsm.chatbot.model.Consultation();
             c.setUserId(remoteJid);
             c.setContactPhone(cp);
             c.setMessage(text);
             c.setMessageId(messageId);
             consultationRepository.save(c);
-
-            // Mensaje de confirmación con instrucciones de navegación en cursiva
-            String respuesta = "✅ *¡Recibido!* Nuestro equipo ya registro tu consulta.\n\n" +
-                    "_Escriba *0* o *INFO* para el Menú Principal_\n" +
-                    "_o *GRACIAS* para finalizar_";
-
-            evolutionApiService.sendTextMessage(remoteJid, respuesta);
-
-            // Mantenemos el estado por si quiere enviar otra consulta,
-            // pero el usuario ya sabe cómo salir gracias al texto anterior.
+            evolutionApiService.sendTextMessage(remoteJid, "✅ *¡Recibido!* Ya lo anoté para el representante.");
             userSessionService.setUserState(remoteJid, "WAITING_MESSAGE_BODY");
         } catch (Exception e) {
             logger.error("Error saving consultation", e);
@@ -287,14 +264,14 @@ public class WebhookController {
 
     private void exitConversation(String jid) {
         userSessionService.clearUserState(jid);
-        evolutionApiService.sendTextMessage(jid, "👋🏻¡Hasta Luego! Gracias por contactarte con nosotros. IGSM - UTN");
+        evolutionApiService.sendTextMessage(jid, "¡Hasta luego!");
     }
 
     private String getDisplayName(String type) {
         return switch (type) {
             case "DIPLOMATURA" -> "Diplomaturas";
             case "TECNICATURA" -> "Tecnicaturas";
-            case "LICENCIATURA", "PROFESORADO" -> "Licenciaturas y Tramo Docente";
+            case "LICENCIATURA", "PROFESORADO" -> "Licenciatura/Profesorado";
             default -> toTitleCase(type);
         };
     }
