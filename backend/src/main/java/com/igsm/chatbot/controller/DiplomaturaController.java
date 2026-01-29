@@ -46,6 +46,7 @@ public class DiplomaturaController {
                     diplomatura.setName(diplomaturaDetails.getName());
                     diplomatura.setDescription(diplomaturaDetails.getDescription());
                     diplomatura.setContent(diplomaturaDetails.getContent());
+                    diplomatura.setType(diplomaturaDetails.getType());
                     return ResponseEntity.ok(diplomaturaRepository.save(diplomatura));
                 })
                 .orElse(ResponseEntity.notFound().build());
