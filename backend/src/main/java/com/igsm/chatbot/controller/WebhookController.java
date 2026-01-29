@@ -196,10 +196,10 @@ public class WebhookController {
                 index++;
             }
         }
-        menu.append(index).append(". Escriba su consulta para contactarse con alguien del equipo\n");
+        menu.append(index).append(". Deje su mensaje a un representante\n");
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:CONTACT");
         index++;
-        menu.append(index).append(". Finalizar conversacion");
+        menu.append(index).append(". FINALIZAR CONVERSACIÓN");
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:EXIT");
 
         evolutionApiService.sendTextMessage(remoteJid, menu.toString());
@@ -244,6 +244,10 @@ public class WebhookController {
         } else if ("2".equals(text)) {
             userSessionService.setUserState(jid, "WAITING_CONTACT_NUMBER");
             evolutionApiService.sendTextMessage(jid, "Ingrese el número:");
+        } else {
+            // Si escribe cualquier otra cosa, le mostramos las opciones de nuevo
+            evolutionApiService.sendTextMessage(jid,
+                    "⚠️ Opción no válida.\n\n📞 *Contacto*\n1. Usar mi número\n2. Ingresar otro");
         }
     }
 
