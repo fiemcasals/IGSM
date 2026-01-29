@@ -192,7 +192,7 @@ public class WebhookController {
         menu.append(index).append(". Deje su mensaje a un representante\n");
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:CONTACT");
         index++;
-        menu.append(index).append(". FINALIZAR CONVERSACIÓN");
+        menu.append(index).append(". Finalizar conversación");
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:EXIT");
 
         evolutionApiService.sendTextMessage(remoteJid, menu.toString());
