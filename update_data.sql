@@ -1,11 +1,43 @@
--- Script para actualizar las diplomaturass/carreras
+-- Script para actualizar las diplomaturas/carreras
 -- Ejecutar en la base de datos PostgreSQL
 
 -- 1. Limpiar tabla existente (CRÍTICO: Esto borra las que sobran)
 TRUNCATE TABLE diplomaturas CASCADE;
 
--- 2. Insertar SOLO las 9 diplomaturass indicadas
+-- 2. Insertar TODAS las carreras (Profesorado, Tecnicaturas, Licenciaturas y Diplomaturas)
 
+-- PROFESORADO
+INSERT INTO diplomaturas (name, type, description, content) VALUES (
+    'Profesorado en Docencia Superior',
+    'PROFESORADO',
+    'Ciclo de complementación pedagógica curricular.',
+    'Carrera: Profesorado en Docencia Superior\nObjetivo/Perfil profesional/descripción: Ciclo de complementación pedagógica curricular. Conforme la Resolución N° 12767/97, el título que se otorga, habilita ingresar al sistema educativo público de la Provincia de Buenos Aires, facultando a los inscriptos/as a tomar cargos/módulos y/o horas cátedra en las instituciones educativas bonaerenses. Permite el ejercicio de la docencia en el listado oficial o 108A.\n📋 Requisitos: Poseer título de educación superior emitido por una institución educativa reconocida oficialmente que certifique el egreso de una carrera cuya trayectoria formativa conste de una carga horaria mínima de mil ochocientas (1.800) horas reloj y dos y medio (2 1/2) años de duración (mínimo).\n🎓Certificación: UTN\n⏱️ Duración: 20 meses\n📚 Modalidad: Semipresencial: 1 sábado presencial al mes, el resto de las actividades es mediante campus virtual en modalidad asincrónica.\n📌Matrícula de Inscripción: $85.000 (hasta el 31/01/2026)\n📌Cuotas: mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n🖊️Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: https://forms.gle/HmVfwEE2AZMo97ax9\n🌐Para conocer más detalles de la carrera: https://ism.edu.ar/profesorado-en-docencia-superior/'
+);
+
+-- TECNICATURAS
+INSERT INTO diplomaturas (name, type, description, content) VALUES (
+    'Tecnicatura en Higiene y Seguridad en el Trabajo',
+    'TECNICATURA',
+    'Organización, planificación y gestión de seguridad laboral.',
+    'Carrera: Tecnicatura en Higiene y Seguridad en el Trabajo\nDescripción breve: organización, la planificación y organización de actividades, el diseño, la gestión de los recursos de los servicios, la evaluación y control y la capacitación en aspectos inherentes a la higiene y seguridad en el trabajo\n📋 Requisitos: Título secundario completo\n🎓Certificación: ISM\n⏱️ Duración: 3 años\n📚 Modalidad: Presencial.\n📌Matrícula de Inscripción: $115.000 hasta el 28/02/26\n📌Cuotas: mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n🖊️Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: https://forms.gle/HmVfwEE2AZMo97ax9\n🌐Para conocer más detalles de la carrera: https://ism.edu.ar/tecnicatura-superior-en-seguridad-e-higiene/'
+);
+
+INSERT INTO diplomaturas (name, type, description, content) VALUES (
+    'Tecnicatura Superior en Marketing',
+    'TECNICATURA',
+    'Tecnicatura Superior en Marketing',
+    'Carrera: Tecnicatura Superior en Marketing\nObjetivo/Perfil profesional/descripción:\n📋 Requisitos: Título secundario completo\n🎓Certificación: ISM\n⏱️ Duración: 3 años\n📚 Modalidad: Presencial ?\n📌Matrícula de Inscripción: $115.000 hasta el 28/02/26\n📌Cuotas: mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n🖊️Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: https://forms.gle/HmVfwEE2AZMo97ax9\n🌐Para conocer más detalles de la carrera: https://ism.edu.ar/tecnicatura-superior-en-marketing/'
+);
+
+-- LICENCIATURAS
+INSERT INTO diplomaturas (name, type, description, content) VALUES (
+    'Licenciatura en Higiene y Seguridad en el Trabajo',
+    'LICENCIATURA',
+    'Licenciatura en Higiene y Seguridad en el Trabajo',
+    'Carrera: Licenciatura en Higiene y Seguridad en el Trabajo\nObjetivo/Perfil profesional/descripción:\n📋 Requisitos: \n🎓Certificación: UTN\n⏱️ Duración: 34 meses\n📚 Modalidad: Semipresencial\n📌Matrícula de Inscripción:\n📌Cuotas: mensuales, correspondientes a la duración de la carrera. Valores 2026 a confirmar.\n🖊️Si desea inscribirse, haga click en el enlace para completar la solicitud de inscripción: https://forms.gle/HmVfwEE2AZMo97ax9\n🌐Para conocer más detalles de la carrera: https://ism.edu.ar/licenciatura-en-higiene-y-seguridad/'
+);
+
+-- DIPLOMATURAS
 INSERT INTO diplomaturas (name, type, description, content) VALUES (
     'Diplomatura en Desarrollo de Software',
     'DIPLOMATURA',
