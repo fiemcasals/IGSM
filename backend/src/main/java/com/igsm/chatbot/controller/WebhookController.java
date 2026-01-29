@@ -185,7 +185,7 @@ public class WebhookController {
         Map<String, List<com.igsm.chatbot.model.Diplomatura>> grouped = allDiplos.stream()
                 .collect(Collectors.groupingBy(d -> d.getType() != null ? d.getType().toUpperCase() : "OTROS"));
 
-        List<String> orderedTypes = List.of("DIPLOMATURA", "TECNICATURA", "LICENCIATURA", "PROFESORADO", "OTROS");
+        List<String> orderedTypes = List.of("DIPLOMATURA", "TECNICATURA", "LICENCIATURA", "PROFESORADO");
         int index = 1;
         for (String type : orderedTypes) {
             if (grouped.containsKey(type)) {
@@ -283,7 +283,7 @@ public class WebhookController {
 
     private void exitConversation(String jid) {
         userSessionService.clearUserState(jid);
-        evolutionApiService.sendTextMessage(jid, "¡Hasta luego!");
+        evolutionApiService.sendTextMessage(jid, "👋🏻¡Hasta Luego! Gracias por contactarte con nosotros. IGSM - UTN");
     }
 
     private String getDisplayName(String type) {
