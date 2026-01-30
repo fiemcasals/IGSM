@@ -56,15 +56,26 @@ public class WebhookController {
                 return;
             }
 
-            if (fromMe && !text.equalsIgnoreCase("INFO"))
+           // 1. DISPARADOR MANUAL (Solo cuando vos escribís desde el celular del bot)
+           // Si el mensaje es MÍO y digo "HOLA", mando el menú.
+            if (fromMe && text.equalsIgnoreCase("HOLA!")) {
+            showMainMenu(remoteJid);
+            return;
+            }
+            // 2. FILTRO DE SEGURIDAD (La pieza que falta)
+            // Si el mensaje es MÍO (del bot) y no fue el HOLA de arriba,
+            // salimos aquí para no procesar nuestros propios mensajes.
+            if (fromMe) {
                 return;
+            }
 
-            if (text.equalsIgnoreCase("GRACIAS") || text.equals("99")) {
+
+            if (text.equalsIgnoreCase("GRACIAS")) {
                 exitConversation(remoteJid);
                 return;
             }
 
-            if (text.equalsIgnoreCase("INFO") || text.equals("0")) {
+            if (text.equalsIgnoreCase("INFO") || text.equals("Hola")) {
                 showMainMenu(remoteJid);
                 return;
             }
@@ -127,16 +138,12 @@ public class WebhookController {
         }
     }
 
-    private void handleSubmenuSelection(String remoteJid, String text) {
-        // 0 -> Siempre vuelve al Menú Principal (limpia navegación)
+        private void handleSubmenuSelection(String remoteJid, String text) {
         if ("0".equals(text)) {
             showMainMenu(remoteJid);
             return;
         }
 
-        // 1 -> Solo vuelve atrás si el usuario ya está VIENDO el contenido de una
-        // diplomatura.
-        // Si está en la LISTA, el '1' debe cargar la diplomatura #1.
         String isViewingDetail = userSessionService.getSessionData(remoteJid, "is_viewing_detail");
         if ("1".equals(text) && "true".equals(isViewingDetail)) {
             String lastType = userSessionService.getSessionData(remoteJid, "current_category_type");
@@ -156,9 +163,7 @@ public class WebhookController {
             diplomaturaRepository.findById(id).ifPresentOrElse(diplo -> {
                 String contenidoBot = diplo.getContent();
                 if (contenidoBot != null && !contenidoBot.isEmpty()) {
-                    // Marcamos que el usuario está viendo un detalle
                     userSessionService.putSessionData(remoteJid, "is_viewing_detail", "true");
-
                     String nav = "\n\n---\n0️⃣ *Menú Principal*\n1️⃣ *Volver al listado anterior*";
                     evolutionApiService.sendTextMessage(remoteJid, contenidoBot + nav);
                 }
@@ -168,39 +173,35 @@ public class WebhookController {
         }
     }
 
-    private void showMainMenu(String remoteJid) {
+     private void showMainMenu(String remoteJid) {
         userSessionService.setUserState(remoteJid, "WAITING_MAIN_MENU_SELECTION");
         userSessionService.removeSessionData(remoteJid, "is_viewing_detail");
 
-        StringBuilder menu = new StringBuilder(
-                "Bienvenido a nuestro asistente virtual 👋🏻\nSelecciona una opción:\n\n");
+        StringBuilder menu = new StringBuilder("Bienvenido a nuestro asistente virtual 👋🏻\nSelecciona una opción:\n\n");
         List<com.igsm.chatbot.model.Diplomatura> allDiplos = diplomaturaRepository.findAll();
-        Map<String, List<com.igsm.chatbot.model.Diplomatura>> grouped = allDiplos.stream()
-                .collect(Collectors.groupingBy(d -> d.getType() != null ? d.getType().toUpperCase() : "OTROS"));
+        
+        // Agrupamos para saber qué categorías mostrar
+        java.util.Map<String, List<com.igsm.chatbot.model.Diplomatura>> grouped = allDiplos.stream()
+                .collect(java.util.stream.Collectors.groupingBy(d -> d.getType() != null ? d.getType().toUpperCase() : "OTROS"));
 
-        // 1. Diplomaturas
         int index = 1;
         if (grouped.containsKey("DIPLOMATURA")) {
             menu.append(index).append(". Diplomaturas\n");
             userSessionService.putSessionData(remoteJid, "menu_option_" + index, "TYPE:DIPLOMATURA");
             index++;
         }
-
-        // 2. Tecnicaturas
         if (grouped.containsKey("TECNICATURA")) {
             menu.append(index).append(". Tecnicaturas\n");
             userSessionService.putSessionData(remoteJid, "menu_option_" + index, "TYPE:TECNICATURA");
             index++;
         }
-
-        // 3. Licenciatura y Tramo docente
         if (grouped.containsKey("LICENCIATURA") || grouped.containsKey("PROFESORADO")) {
             menu.append(index).append(". Licenciatura y Tramo docente\n");
             userSessionService.putSessionData(remoteJid, "menu_option_" + index, "TYPE:LIC_PROF");
             index++;
         }
 
-        menu.append(index).append(". Deje su mensaje a un representante\n");
+        menu.append(index).append(". Contacto con el equipo IGSM - UTN\n");
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:CONTACT");
         index++;
         menu.append(index).append(". Finalizar conversación");
@@ -211,37 +212,43 @@ public class WebhookController {
 
     private void showSubmenu(String remoteJid, String type) {
         List<com.igsm.chatbot.model.Diplomatura> filtered;
+        userSessionService.putSessionData(remoteJid, "current_category_type", type);
+        userSessionService.removeSessionData(remoteJid, "is_viewing_detail");
 
+        String displayTitle;
         if ("LIC_PROF".equals(type)) {
             filtered = diplomaturaRepository.findAll().stream()
                     .filter(d -> d.getType() != null && (d.getType().equalsIgnoreCase("LICENCIATURA")
                             || d.getType().equalsIgnoreCase("PROFESORADO")))
-                    .sorted(Comparator.comparing(com.igsm.chatbot.model.Diplomatura::getName))
-                    .collect(Collectors.toList());
-            type = "Licenciatura y Tramo docente"; // Para el título
+                    .sorted(java.util.Comparator.comparing(com.igsm.chatbot.model.Diplomatura::getName))
+                    .collect(java.util.stream.Collectors.toList());
+            displayTitle = "Licenciatura y Tramo docente";
         } else {
+            displayTitle = switch (type.toUpperCase()) {
+                case "DIPLOMATURA" -> "Diplomaturas";
+                case "TECNICATURA" -> "Tecnicaturas";
+                default -> toTitleCase(type) + "s";
+            };
+
             String finalType = type;
             filtered = diplomaturaRepository.findAll().stream()
                     .filter(d -> d.getType() != null && d.getType().equalsIgnoreCase(finalType))
-                    .sorted(Comparator.comparing(com.igsm.chatbot.model.Diplomatura::getName))
-                    .collect(Collectors.toList());
+                    .sorted(java.util.Comparator.comparing(com.igsm.chatbot.model.Diplomatura::getName))
+                    .collect(java.util.stream.Collectors.toList());
         }
 
         userSessionService.setUserState(remoteJid, "WAITING_SUBMENU_SELECTION");
-        userSessionService.putSessionData(remoteJid, "current_category_type", type);
-        userSessionService.removeSessionData(remoteJid, "is_viewing_detail"); // Aseguramos que el 1 no sea volver atrás
-                                                                              // aquí
 
-        StringBuilder menu = new StringBuilder("🎓 *" + toTitleCase(type) + "s*\n\nSeleccione una opción:\n\n");
+        StringBuilder menu = new StringBuilder("🎓 *" + displayTitle + "*\n\nSeleccione una opción:\n\n");
         for (int i = 0; i < filtered.size(); i++) {
             menu.append((i + 1)).append(". ").append(toTitleCase(filtered.get(i).getName())).append("\n");
             userSessionService.putSessionData(remoteJid, "submenu_option_" + (i + 1),
                     String.valueOf(filtered.get(i).getId()));
         }
-        menu.append("\n0️⃣ *Volver al Menú Principal*"); // Estilo unificado
-
+        menu.append("\n0️⃣ *Volver al Menú Principal*");
         evolutionApiService.sendTextMessage(remoteJid, menu.toString());
     }
+
 
     // --- MÉTODOS DE APOYO MANTENIDOS ---
     private void startContactFlow(String remoteJid) {
@@ -278,7 +285,7 @@ public class WebhookController {
             c.setMessage(text);
             c.setMessageId(messageId);
             consultationRepository.save(c);
-            evolutionApiService.sendTextMessage(remoteJid, "✅ *¡Recibido!* Ya lo anoté para el representante.");
+            evolutionApiService.sendTextMessage(remoteJid, "¡✅ *¡Recibido!* Ya lo anoté📝, un miembro del equipo revisará tu mensaje y te responderá lo antes posible.\n0️⃣ Volver al Menú Principal");
             userSessionService.setUserState(remoteJid, "WAITING_MESSAGE_BODY");
         } catch (Exception e) {
             logger.error("Error saving consultation", e);
