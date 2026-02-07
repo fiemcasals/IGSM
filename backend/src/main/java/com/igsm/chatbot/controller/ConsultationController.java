@@ -70,4 +70,10 @@ public class ConsultationController {
             }
         }
     }
+
+    @DeleteMapping("/user/{userId}")
+    public void deleteConsultationByUser(@PathVariable String userId) {
+        List<Consultation> userConsultations = consultationRepository.findByUserId(userId);
+        consultationRepository.deleteAll(userConsultations);
+    }
 }

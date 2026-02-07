@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X, Edit2, Users } from 'lucide-react';
+import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X, Edit2, Users, Trash2 } from 'lucide-react';
 
 const ConsultationList = () => {
     const [consultations, setConsultations] = useState([]);
@@ -137,6 +136,29 @@ const ConsultationList = () => {
             .catch(console.error);
     };
 
+    const handleDeleteConversation = (userId, e) => {
+        e.stopPropagation();
+        if (!window.confirm("¿Estás seguro de eliminar este chat? Se borrarán todos los mensajes.")) return;
+
+        axios.delete(`/api/consultations/user/${userId}`)
+            .then(() => {
+                if (selectedUser === userId) setSelectedUser(null);
+                fetchConsultations();
+            })
+            .catch(console.error);
+    };
+
+    const handleMarkAsSeen = (userId, e) => {
+        e.stopPropagation();
+        axios.put(`/api/consultations/user/${userId}/seen`)
+            .then(() => {
+                setConsultations(prev => prev.map(c =>
+                    c.userId === userId ? { ...c, seen: true } : c
+                ));
+            })
+            .catch(console.error);
+    };
+
     const handleNickname = () => {
         if (!nicknameData.nickname.trim()) return;
         axios.post(`/api/team/profiles/${nicknameData.jid}/nickname`, { nickname: nicknameData.nickname })
@@ -175,13 +197,12 @@ const ConsultationList = () => {
         thread.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         thread.lastMessage = thread.messages[thread.messages.length - 1];
 
-        // Calculate unread count (messages since last admin reply)
+        // Calculate unread count (messages since last admin reply AND not seen)
         let count = 0;
         for (let i = thread.messages.length - 1; i >= 0; i--) {
-            if (thread.messages[i].adminReply) {
-                break;
-            }
-            count++;
+            const msg = thread.messages[i];
+            if (msg.adminReply) break; // Stop at last reply
+            if (!msg.seen) count++;    // Count only unseen messages from user
         }
         thread.unreadCount = count;
 
@@ -252,11 +273,24 @@ const ConsultationList = () => {
                                     {thread.lastMessage.adminReply && <span className="text-blue-600 mr-1">Tú:</span>}
                                     {thread.lastMessage.message}
                                 </p>
-                                {thread.unreadCount > 0 && (
-                                    <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                                        {thread.unreadCount}
-                                    </span>
-                                )}
+                                <div className="flex items-center gap-2">
+                                    {thread.unreadCount > 0 && (
+                                        <span
+                                            onClick={(e) => handleMarkAsSeen(thread.userId, e)}
+                                            className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full hover:bg-green-600 cursor-pointer"
+                                            title="Marcar como leído"
+                                        >
+                                            {thread.unreadCount}
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={(e) => handleDeleteConversation(thread.userId, e)}
+                                        className="text-gray-400 hover:text-red-500 p-1"
+                                        title="Eliminar chat"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     ))}

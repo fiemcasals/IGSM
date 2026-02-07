@@ -88,7 +88,8 @@ public class TeamController {
 
         for (Consultation c : latestMessages) {
             // Count ONLY if the last message is NOT from admin (i.e. waiting for reply)
-            if (!c.isAdminReply()) {
+            // AND it hasn't been manually marked as seen
+            if (!c.isAdminReply() && !c.isSeen()) {
                 ContactProfile profile = contactProfileRepository.findById(c.getUserId()).orElse(null);
                 if (profile != null && profile.getAssignedMember() != null) {
                     stats.merge(profile.getAssignedMember().getId(), 1L, Long::sum);
