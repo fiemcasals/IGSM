@@ -63,14 +63,12 @@ public class WebhookController {
             }
 
             // 1. DISPARADOR MANUAL (Solo cuando vos escribís desde el celular del bot)
-            // Si el mensaje es MÍO y digo "HOLA", mando el menú.
-            if (fromMe && text.equalsIgnoreCase("HOLA!")) {
+            // Si el mensaje es MÍO y digo "Hola!", mando el menú.
+            if (fromMe && text.equalsIgnoreCase("Hola!")) {
                 showMainMenu(remoteJid);
                 return;
             }
             // 2. FILTRO DE SEGURIDAD (La pieza que falta)
-            // Si el mensaje es MÍO (del bot) y no fue el HOLA de arriba,
-            // salimos aquí para no procesar nuestros propios mensajes.
             if (fromMe) {
                 return;
             }
@@ -80,7 +78,7 @@ public class WebhookController {
                 return;
             }
 
-            if (text.equalsIgnoreCase("INFO") || text.equals("Hola")) {
+            if (text.equalsIgnoreCase("INFO") || text.equals("Hola!")) {
                 showMainMenu(remoteJid);
                 return;
             }
