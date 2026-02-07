@@ -6,10 +6,15 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 
 const Dashboard = () => {
     const [stats, setStats] = useState({ inquiries: [], subscriptions: [] });
+    const [inquiriesList, setInquiriesList] = useState([]);
 
     useEffect(() => {
         axios.get('/api/stats')
             .then(res => setStats(res.data))
+            .catch(err => console.error(err));
+
+        axios.get('/api/stats/inquiries')
+            .then(res => setInquiriesList(res.data))
             .catch(err => console.error(err));
     }, []);
 
@@ -49,6 +54,54 @@ const Dashboard = () => {
                 </div>
 
 
+            </div>
+
+            <div className="mt-8 bg-white p-4 rounded-lg shadow">
+                <h2 className="text-xl font-semibold mb-4">Registro de Consultas Detallado</h2>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full leading-normal">
+                        <thead>
+                            <tr>
+                                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Fecha
+                                </th>
+                                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Usuario
+                                </th>
+                                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Teléfono
+                                </th>
+                                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Programa
+                                </th>
+                                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Tipo
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {inquiriesList.map((inq) => (
+                                <tr key={inq.id}>
+                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                        {new Date(inq.timestamp).toLocaleString()}
+                                    </td>
+                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                        {inq.userId}
+                                    </td>
+                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                        {inq.contactPhone}
+                                    </td>
+                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                        {inq.diplomaturaName}
+                                    </td>
+                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                        {inq.diplomaturaType}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

@@ -101,4 +101,22 @@ public class StatsController {
             return map;
         }).collect(Collectors.toList());
     }
+
+    @GetMapping("/inquiries")
+    public List<Map<String, Object>> getInquiries() {
+        return inquiryRepository.findAll().stream()
+                .sorted((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()))
+                .map(inq -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", inq.getId());
+                    map.put("userId", inq.getUserId());
+                    map.put("contactPhone", inq.getContactPhone());
+                    map.put("timestamp", inq.getTimestamp());
+                    if (inq.getDiplomatura() != null) {
+                        map.put("diplomaturaName", inq.getDiplomatura().getName());
+                        map.put("diplomaturaType", inq.getDiplomatura().getType());
+                    }
+                    return map;
+                }).collect(Collectors.toList());
+    }
 }

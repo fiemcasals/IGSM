@@ -18,6 +18,9 @@ public class Inquiry {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Diplomatura diplomatura; // esta linea indica que esta variable es una foreign key de la tabla
 
+    private String userId;
+    private String contactPhone;
+
     private LocalDateTime timestamp; // esta linea indica que esta variable es una foreign key de la tabla
 
     @PrePersist // este comentario indica que el metodo onCreate() se ejecuta antes de persistir
