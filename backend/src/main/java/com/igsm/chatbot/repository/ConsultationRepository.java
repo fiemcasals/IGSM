@@ -9,4 +9,8 @@ import java.util.List;
 @Repository
 public interface ConsultationRepository extends JpaRepository<Consultation, Long> {
     List<Consultation> findAllByOrderByTimestampDesc();
+
+    List<Consultation> findByUserId(String userId);
+
+    List<Consultation> findBySeenFalse();
 }

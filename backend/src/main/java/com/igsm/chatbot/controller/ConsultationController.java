@@ -55,7 +55,19 @@ public class ConsultationController {
 
             // 3. Mark original as replied
             originalConsultation.setReplied(true);
+            originalConsultation.setSeen(true); // Also mark as seen if replying
             consultationRepository.save(originalConsultation);
+        }
+    }
+
+    @PutMapping("/user/{userId}/seen")
+    public void markAllAsSeen(@PathVariable String userId) {
+        List<Consultation> userConsultations = consultationRepository.findByUserId(userId);
+        for (Consultation c : userConsultations) {
+            if (!c.isSeen()) {
+                c.setSeen(true);
+                consultationRepository.save(c);
+            }
         }
     }
 }

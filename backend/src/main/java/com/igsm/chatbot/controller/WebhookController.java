@@ -290,6 +290,10 @@ public class WebhookController {
     }
 
     private void handleReply(String remoteJid, String text, String msgId) {
+        if ("0".equals(text.trim())) {
+            showMainMenu(remoteJid);
+            return;
+        }
         saveReplyAsConsultation(remoteJid, text, msgId);
     }
 

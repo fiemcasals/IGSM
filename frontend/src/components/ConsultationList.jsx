@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X } from 'lucide-react';
+import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X, Edit2, Users } from 'lucide-react';
 
 const ConsultationList = () => {
     const [consultations, setConsultations] = useState([]);
@@ -8,6 +9,14 @@ const ConsultationList = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [replyMessage, setReplyMessage] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+
+    // Team & Profile State
+    const location = useLocation();
+    const [teamMemberId, setTeamMemberId] = useState(null);
+    const [teamMembers, setTeamMembers] = useState([]);
+    const [contactProfiles, setContactProfiles] = useState({}); // Map: remoteJid -> profile
+    const [showNicknameModal, setShowNicknameModal] = useState(false);
+    const [nicknameData, setNicknameData] = useState({ jid: "", nickname: "" });
 
     // FAQ Modal State
     const [showFaqModal, setShowFaqModal] = useState(false);
@@ -17,10 +26,36 @@ const ConsultationList = () => {
 
     useEffect(() => {
         fetchConsultations();
+        fetchTeamData();
         // Poll for new messages every 10 seconds
-        const interval = setInterval(fetchConsultations, 10000);
+        const interval = setInterval(() => {
+            fetchConsultations();
+            fetchTeamData();
+        }, 10000);
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const id = params.get('teamMemberId');
+        setTeamMemberId(id ? parseInt(id) : null);
+        setSelectedUser(null); // Deselect when switching views
+    }, [location.search]);
+
+    // Mark as seen when selecting a user
+    useEffect(() => {
+        if (selectedUser) {
+            axios.put(`/api/consultations/user/${selectedUser}/seen`)
+                .then(() => {
+                    // Optimistically update local state
+                    setConsultations(prev => prev.map(c =>
+                        c.userId === selectedUser ? { ...c, seen: true } : c
+                    ));
+                    fetchConsultations(); // Refresh to be sure
+                })
+                .catch(console.error);
+        }
+    }, [selectedUser]);
 
     useEffect(() => {
         scrollToBottom();
@@ -37,6 +72,15 @@ const ConsultationList = () => {
                 setLoading(false);
             });
     };
+
+    const fetchTeamData = () => {
+        axios.get('/api/team/members').then(res => setTeamMembers(res.data)).catch(console.error);
+        axios.get('/api/team/profiles').then(res => {
+            const map = {};
+            res.data.forEach(p => map[p.remoteJid] = p);
+            setContactProfiles(map);
+        }).catch(console.error);
+    }
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -84,15 +128,42 @@ const ConsultationList = () => {
             .catch(console.error);
     };
 
+    const handleAssign = (userId, memberId) => {
+        axios.post(`/api/team/profiles/${userId}/assign`, { memberId })
+            .then(res => {
+                setContactProfiles(prev => ({ ...prev, [userId]: res.data }));
+                fetchConsultations(); // Refresh to update view if filtering
+            })
+            .catch(console.error);
+    };
+
+    const handleNickname = () => {
+        if (!nicknameData.nickname.trim()) return;
+        axios.post(`/api/team/profiles/${nicknameData.jid}/nickname`, { nickname: nicknameData.nickname })
+            .then(res => {
+                setContactProfiles(prev => ({ ...prev, [res.data.remoteJid]: res.data }));
+                setShowNicknameModal(false);
+            })
+            .catch(console.error);
+    };
+
+    const openNicknameModal = (userId, currentNick) => {
+        setNicknameData({ jid: userId, nickname: currentNick || "" });
+        setShowNicknameModal(true);
+    };
+
     // Group consultations by user
     const threads = consultations.reduce((acc, curr) => {
+        const profile = contactProfiles[curr.userId];
+
         if (!acc[curr.userId]) {
             acc[curr.userId] = {
                 userId: curr.userId,
                 contactPhone: curr.contactPhone,
                 messages: [],
                 lastMessage: null,
-                unreadCount: 0
+                unreadCount: 0,
+                profile: profile || null
             };
         }
         acc[curr.userId].messages.push(curr);
@@ -110,10 +181,18 @@ const ConsultationList = () => {
         return thread;
     }).sort((a, b) => new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp));
 
-    const filteredThreads = sortedThreads.filter(thread =>
-        thread.contactPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        thread.userId.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredThreads = sortedThreads.filter(thread => {
+        // Text Search
+        const matchesSearch = thread.contactPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            thread.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            thread.profile?.nickname?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        // Team Filter
+        if (teamMemberId) {
+            return matchesSearch && thread.profile?.assignedMember?.id === teamMemberId;
+        }
+        return matchesSearch;
+    });
 
     const activeThread = selectedUser ? threads[selectedUser] : null;
 
@@ -147,8 +226,17 @@ const ConsultationList = () => {
                             className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${selectedUser === thread.userId ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''}`}
                         >
                             <div className="flex justify-between items-start mb-1">
-                                <span className="font-semibold text-gray-800">{thread.contactPhone || thread.userId}</span>
-                                <span className="text-xs text-gray-500">
+                                <div>
+                                    <span className="font-semibold text-gray-800 block">
+                                        {thread.profile?.nickname || thread.contactPhone || thread.userId}
+                                    </span>
+                                    {thread.profile?.assignedMember && (
+                                        <span className="text-[10px] bg-blue-100 text-blue-800 px-1 rounded">
+                                            👤 {thread.profile.assignedMember.name}
+                                        </span>
+                                    )}
+                                </div>
+                                <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
                                     {new Date(thread.lastMessage.timestamp).toLocaleDateString()}
                                 </span>
                             </div>
@@ -190,8 +278,28 @@ const ConsultationList = () => {
                                     <User size={24} className="text-gray-600" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-800">{activeThread.contactPhone}</h3>
-                                    <span className="text-xs text-gray-500">{activeThread.userId}</span>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-gray-800">
+                                            {activeThread.profile?.nickname || activeThread.contactPhone}
+                                        </h3>
+                                        <button onClick={() => openNicknameModal(activeThread.userId, activeThread.profile?.nickname)} className="text-gray-400 hover:text-blue-600">
+                                            <Edit2 size={14} />
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                        <span>{activeThread.userId}</span>
+                                        <span>•</span>
+                                        <select
+                                            className="bg-transparent border-none outline-none text-blue-600 font-semibold cursor-pointer p-0"
+                                            value={activeThread.profile?.assignedMember?.id || ""}
+                                            onChange={(e) => handleAssign(activeThread.userId, e.target.value ? parseInt(e.target.value) : null)}
+                                        >
+                                            <option value="">Sin Asignar</option>
+                                            {teamMembers.map(m => (
+                                                <option key={m.id} value={m.id}>{m.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -309,6 +417,27 @@ const ConsultationList = () => {
                             >
                                 Guardar y Cerrar
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Nickname Modal */}
+            {showNicknameModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+                        <h3 className="text-lg font-bold mb-4">Editar Nombre</h3>
+                        <input
+                            type="text"
+                            className="w-full border p-2 rounded mb-4"
+                            placeholder="Nombre / Apodo"
+                            value={nicknameData.nickname}
+                            onChange={(e) => setNicknameData({ ...nicknameData, nickname: e.target.value })}
+                            autoFocus
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button onClick={() => setShowNicknameModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                            <button onClick={handleNickname} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
                         </div>
                     </div>
                 </div>
