@@ -35,13 +35,20 @@ public class ConsultationController {
     public void replyToConsultation(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         Consultation originalConsultation = consultationRepository.findById(id).orElseThrow();
         String message = payload.get("message");
+        String quoteMessageId = payload.get("quoteMessageId");
 
         if (message != null && !message.isEmpty()) {
-            // 1. Send message via Evolution API with quote
-            String fullMessage = message
-                    + "\n\n📝 *Para continuar esta conversación, simplemente responda a este mensaje.*";
-            evolutionApiService.sendTextWithQuote(originalConsultation.getUserId(), fullMessage,
-                    originalConsultation.getMessageId());
+            // 1. Send message via Evolution API
+            if (quoteMessageId != null && !quoteMessageId.isEmpty()) {
+                // Specific reply with quote
+                // Use a cleaner footer or none at all if requested, user asked to remove footer
+                // for general replies
+                // For specific replies, we might still want to just send the text.
+                evolutionApiService.sendTextWithQuote(originalConsultation.getUserId(), message, quoteMessageId);
+            } else {
+                // General reply (no quote, no footer)
+                evolutionApiService.sendTextMessage(originalConsultation.getUserId(), message);
+            }
 
             // 2. Save Admin Reply as a new Consultation record
             Consultation adminReply = new Consultation();
@@ -75,5 +82,22 @@ public class ConsultationController {
     public void deleteConsultationByUser(@PathVariable String userId) {
         List<Consultation> userConsultations = consultationRepository.findByUserId(userId);
         consultationRepository.deleteAll(userConsultations);
+    }
+
+    @PutMapping("/user/{userId}/unseen")
+    public void markLastAsUnseen(@PathVariable String userId) {
+        // Logica: Buscar el ultimo mensaje del usuario (no admin) y marcarlo como
+        // seen=false
+        List<Consultation> userConsultations = consultationRepository.findByUserId(userId);
+        // Sort descending
+        userConsultations.sort((a, b) -> b.getTimestamp().compareTo(a.getTimestamp()));
+
+        for (Consultation c : userConsultations) {
+            if (!c.isAdminReply()) {
+                c.setSeen(false);
+                consultationRepository.save(c);
+                break; // Only mark the latest one
+            }
+        }
     }
 }

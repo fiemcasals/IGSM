@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X, Edit2, Users, Trash2 } from 'lucide-react';
+import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X, Edit2, Users, Trash2, Mail, CornerUpLeft } from 'lucide-react';
 
 const ConsultationList = () => {
     const [consultations, setConsultations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState(null);
     const [replyMessage, setReplyMessage] = useState("");
+    const [replyingTo, setReplyingTo] = useState(null); // { id, message, sender }
     const [searchTerm, setSearchTerm] = useState("");
 
     // Team & Profile State
@@ -36,10 +37,10 @@ const ConsultationList = () => {
     }, []);
 
     useEffect(() => {
-        const params = new URLSearchParams(location.search);
         const id = params.get('teamMemberId');
         setTeamMemberId(id ? parseInt(id) : null);
         setSelectedUser(null); // Deselect when switching views
+        setReplyingTo(null);
     }, [location.search]);
 
     // Mark as seen when selecting a user
@@ -89,17 +90,40 @@ const ConsultationList = () => {
     const handleReply = () => {
         if (!replyMessage.trim() || !selectedUser) return;
 
-        // Find the last message from the user to reply to (for quoting)
-        const userMessages = consultations.filter(c => c.userId === selectedUser && !c.adminReply)
-            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        let payload = { message: replyMessage };
+        let msgIdToReply = null;
 
-        const lastMessage = userMessages[userMessages.length - 1];
+        if (replyingTo) {
+            // Specific reply to a quoted message
+            msgIdToReply = replyingTo.id;
+            payload.quoteMessageId = replyingTo.messageId; // We need the external ID if available, or just use internal ID logic in backend if mapped. 
+            // Wait, Evolution API needs the message ID from WhatsApp. 
+            // Our model stores 'message_id' from WA in 'messageId' field.
+            payload.quoteMessageId = replyingTo.messageId;
 
-        if (!lastMessage) return;
+            // If we are replying to a specific message, we use that ID.
+            // But wait, the previous logic used "lastMessage" ID for the endpoint path.
+            // The endpoint is /api/consultations/{id}/reply. 
+            // That ID is used for context but we can pass any valid consultation ID of that user.
+            // Let's use the ID of the message we are replying to, OR the last message if general.
+            msgIdToReply = replyingTo.id;
+        } else {
+            // General reply
+            // Find last user message just to have a valid ID for the endpoint path (which is required by current controller structure)
+            // The controller uses findsById(id) to get the user and original message ID.
+            // If we don't quote, we still need a valid ID to find the user.
+            const userMessages = consultations.filter(c => c.userId === selectedUser).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            if (userMessages.length > 0) {
+                msgIdToReply = userMessages[0].id;
+            }
+        }
 
-        axios.post(`/api/consultations/${lastMessage.id}/reply`, { message: replyMessage })
+        if (!msgIdToReply) return;
+
+        axios.post(`/api/consultations/${msgIdToReply}/reply`, payload)
             .then(() => {
                 setReplyMessage("");
+                setReplyingTo(null);
                 fetchConsultations();
             })
             .catch(err => {
@@ -156,6 +180,16 @@ const ConsultationList = () => {
                 setConsultations(prev => prev.map(c =>
                     c.userId === userId ? { ...c, seen: true } : c
                 ));
+            })
+            .catch(console.error);
+    };
+
+    const handleMarkAsUnseen = (userId, e) => {
+        e.stopPropagation();
+        axios.put(`/api/consultations/user/${userId}/unseen`)
+            .then(() => {
+                // Optimistically update: find last user message and set seen=false
+                fetchConsultations(); // Simple refetch to ensure correct state
             })
             .catch(console.error);
     };
@@ -275,7 +309,7 @@ const ConsultationList = () => {
                                     {thread.lastMessage.message}
                                 </p>
                                 <div className="flex items-center gap-2">
-                                    {thread.unreadCount > 0 && (
+                                    {thread.unreadCount > 0 ? (
                                         <span
                                             onClick={(e) => handleMarkAsSeen(thread.userId, e)}
                                             className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full hover:bg-green-600 cursor-pointer"
@@ -283,6 +317,16 @@ const ConsultationList = () => {
                                         >
                                             {thread.unreadCount}
                                         </span>
+                                    ) : (
+                                        !thread.lastMessage.adminReply && (
+                                            <button
+                                                onClick={(e) => handleMarkAsUnseen(thread.userId, e)}
+                                                className="text-gray-400 hover:text-blue-500 p-1"
+                                                title="Marcar como no leído"
+                                            >
+                                                <Mail size={16} />
+                                            </button>
+                                        )
                                     )}
                                     <button
                                         onClick={(e) => handleDeleteConversation(thread.userId, e)}
@@ -355,7 +399,7 @@ const ConsultationList = () => {
                                 >
                                     <div className="flex flex-col gap-1 max-w-[70%]">
                                         <div
-                                            className={`p-3 rounded-lg shadow-sm relative ${msg.adminReply
+                                            className={`p-3 rounded-lg shadow-sm relative group ${msg.adminReply
                                                 ? 'bg-[#d9fdd3] rounded-tr-none'
                                                 : 'bg-white rounded-tl-none'
                                                 }`}
@@ -369,6 +413,15 @@ const ConsultationList = () => {
                                                     <CheckCheck size={14} className="text-blue-500" />
                                                 )}
                                             </div>
+
+                                            {/* Reply Button (visible on hover) */}
+                                            <button
+                                                onClick={() => setReplyingTo(msg)}
+                                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-gray-200 p-1 rounded-full text-gray-600 hover:bg-gray-300 transition-opacity"
+                                                title="Responder"
+                                            >
+                                                <CornerUpLeft size={14} />
+                                            </button>
                                         </div>
                                         {!msg.adminReply && (
                                             <button
@@ -386,6 +439,17 @@ const ConsultationList = () => {
 
                         {/* Input Area */}
                         <div className="p-4 bg-gray-100 border-t border-gray-200">
+                            {replyingTo && (
+                                <div className="mb-2 p-2 bg-gray-200 border-l-4 border-blue-500 rounded flex justify-between items-center text-sm">
+                                    <div className="flex flex-col">
+                                        <span className="text-blue-600 font-bold">Respondiendo a:</span>
+                                        <span className="text-gray-600 truncate max-w-xs">{replyingTo.message}</span>
+                                    </div>
+                                    <button onClick={() => setReplyingTo(null)} className="text-gray-500 hover:text-red-500">
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                            )}
                             <div className="flex gap-2">
                                 <input
                                     type="text"
