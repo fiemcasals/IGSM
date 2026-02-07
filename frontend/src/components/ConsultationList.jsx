@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
-import { MessageSquare, Send, Search, User, Check, CheckCheck } from 'lucide-react';
+import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X } from 'lucide-react';
 
 const ConsultationList = () => {
     const [consultations, setConsultations] = useState([]);
@@ -8,6 +8,11 @@ const ConsultationList = () => {
     const [selectedUser, setSelectedUser] = useState(null);
     const [replyMessage, setReplyMessage] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
+
+    // FAQ Modal State
+    const [showFaqModal, setShowFaqModal] = useState(false);
+    const [faqData, setFaqData] = useState({ question: "", answer: "" });
+
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
@@ -41,7 +46,9 @@ const ConsultationList = () => {
         if (!replyMessage.trim() || !selectedUser) return;
 
         // Find the last message from the user to reply to (for quoting)
-        const userMessages = consultations.filter(c => c.userId === selectedUser && !c.adminReply);
+        const userMessages = consultations.filter(c => c.userId === selectedUser && !c.adminReply)
+            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
         const lastMessage = userMessages[userMessages.length - 1];
 
         if (!lastMessage) return;
@@ -57,6 +64,26 @@ const ConsultationList = () => {
             });
     };
 
+    const handleAddToFAQ = (messageText) => {
+        setFaqData({ question: messageText, answer: "" });
+        setShowFaqModal(true);
+    };
+
+    const handleSaveFAQ = () => {
+        if (!faqData.question.trim() || !faqData.answer.trim()) {
+            alert("Completa ambos campos");
+            return;
+        }
+
+        axios.post('/api/faqs', faqData)
+            .then(() => {
+                setShowFaqModal(false);
+                setFaqData({ question: "", answer: "" });
+                alert("Pregunta frecuente guardada exitosamente");
+            })
+            .catch(console.error);
+    };
+
     // Group consultations by user
     const threads = consultations.reduce((acc, curr) => {
         if (!acc[curr.userId]) {
@@ -69,10 +96,6 @@ const ConsultationList = () => {
             };
         }
         acc[curr.userId].messages.push(curr);
-
-        // Update last message (assuming sorted by timestamp desc from backend, but we might need to sort)
-        // Actually backend returns sorted by timestamp desc. So first item is latest?
-        // Let's re-sort here to be safe for chat view (oldest first)
 
         if (!curr.seen && !curr.adminReply) {
             acc[curr.userId].unreadCount++;
@@ -97,7 +120,7 @@ const ConsultationList = () => {
     if (loading) return <div className="p-6 flex justify-center items-center h-full">Cargando...</div>;
 
     return (
-        <div className="flex h-[calc(100vh-64px)] bg-gray-100 overflow-hidden">
+        <div className="flex h-[calc(100vh-64px)] bg-gray-100 overflow-hidden relative">
             {/* Sidebar - Thread List */}
             <div className={`w-full md:w-1/3 bg-white border-r border-gray-200 flex flex-col ${selectedUser ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-4 border-b border-gray-200 bg-gray-50">
@@ -180,21 +203,31 @@ const ConsultationList = () => {
                                     key={msg.id || index}
                                     className={`flex ${msg.adminReply ? 'justify-end' : 'justify-start'}`}
                                 >
-                                    <div
-                                        className={`max-w-[70%] p-3 rounded-lg shadow-sm relative ${msg.adminReply
+                                    <div className="flex flex-col gap-1 max-w-[70%]">
+                                        <div
+                                            className={`p-3 rounded-lg shadow-sm relative ${msg.adminReply
                                                 ? 'bg-[#d9fdd3] rounded-tr-none'
                                                 : 'bg-white rounded-tl-none'
-                                            }`}
-                                    >
-                                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.message}</p>
-                                        <div className="flex justify-end items-center gap-1 mt-1">
-                                            <span className="text-[10px] text-gray-500">
-                                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                            {msg.adminReply && (
-                                                <CheckCheck size={14} className="text-blue-500" />
-                                            )}
+                                                }`}
+                                        >
+                                            <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.message}</p>
+                                            <div className="flex justify-end items-center gap-1 mt-1">
+                                                <span className="text-[10px] text-gray-500">
+                                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                                {msg.adminReply && (
+                                                    <CheckCheck size={14} className="text-blue-500" />
+                                                )}
+                                            </div>
                                         </div>
+                                        {!msg.adminReply && (
+                                            <button
+                                                onClick={() => handleAddToFAQ(msg.message)}
+                                                className="text-xs text-blue-600 hover:text-blue-800 self-start ml-1 flex items-center gap-1"
+                                            >
+                                                <PlusCircle size={12} /> Agregar a FAQ
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -232,6 +265,54 @@ const ConsultationList = () => {
                     </div>
                 )}
             </div>
+
+            {/* FAQ Modal */}
+            {showFaqModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold">Crear Pregunta Frecuente</h3>
+                            <button onClick={() => setShowFaqModal(false)} className="text-gray-500 hover:text-gray-700">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Pregunta (del usuario)</label>
+                            <textarea
+                                className="w-full border rounded p-2 bg-gray-50"
+                                rows="3"
+                                value={faqData.question}
+                                onChange={(e) => setFaqData({ ...faqData, question: e.target.value })}
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Respuesta (tuya)</label>
+                            <textarea
+                                className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                rows="4"
+                                value={faqData.answer}
+                                onChange={(e) => setFaqData({ ...faqData, answer: e.target.value })}
+                                placeholder="Escribe la respuesta aquí..."
+                                autoFocus
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowFaqModal(false)}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSaveFAQ}
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                            >
+                                Guardar y Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

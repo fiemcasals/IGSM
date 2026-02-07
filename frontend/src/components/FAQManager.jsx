@@ -150,7 +150,12 @@ const FAQManager = () => {
                         ) : (
                             <div>
                                 <div className="flex justify-between items-start mb-2">
-                                    <h3 className="text-xl font-semibold text-gray-800">{faq.question}</h3>
+                                    <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                                        {faq.question}
+                                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full" title="Veces consultada">
+                                            👁️ {faq.queryCount || 0}
+                                        </span>
+                                    </h3>
                                     <div className="flex gap-2">
                                         <button onClick={() => handleEdit(faq)} className="text-blue-600 hover:text-blue-800">
                                             <Edit size={18} />

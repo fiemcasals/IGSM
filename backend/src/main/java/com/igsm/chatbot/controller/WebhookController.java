@@ -32,6 +32,9 @@ public class WebhookController {
     @Autowired
     private com.igsm.chatbot.repository.InquiryRepository inquiryRepository;
 
+    @Autowired
+    private com.igsm.chatbot.service.FaqService faqService;
+
     @PostMapping("/evolution")
     public void receiveMessage(@RequestBody Map<String, Object> payload) {
         try {
@@ -115,7 +118,9 @@ public class WebhookController {
         else if ("WAITING_SUBMENU_SELECTION".equals(state))
             handleSubmenuSelection(remoteJid, text);
         else if ("WAITING_MESSAGE_BODY".equals(state))
-            saveReplyAsConsultation(remoteJid, text, msgId);
+            handleReply(remoteJid, text, msgId);
+        else if ("WAITING_FAQ_SELECTION".equals(state))
+            handleFaqSelection(remoteJid, text);
         else {
             showMainMenu(remoteJid);
         }
@@ -130,6 +135,8 @@ public class WebhookController {
         }
         if (optionData.startsWith("TYPE:")) {
             showSubmenu(remoteJid, optionData.substring(5));
+        } else if (optionData.equals("STATIC:FAQ")) {
+            showFaqMenu(remoteJid);
         } else if (optionData.equals("STATIC:CONTACT")) {
             startContactFlow(remoteJid);
         } else if (optionData.equals("STATIC:EXIT")) {
@@ -140,7 +147,7 @@ public class WebhookController {
     private void handleSubmenuSelection(String remoteJid, String text) {
         if ("0".equals(text)) {
             showMainMenu(remoteJid);
-            return;
+            return; // Don't save
         }
 
         String isViewingDetail = userSessionService.getSessionData(remoteJid, "is_viewing_detail");
@@ -153,8 +160,9 @@ public class WebhookController {
 
         String idStr = userSessionService.getSessionData(remoteJid, "submenu_option_" + text);
         if (idStr == null) {
+            simulateTypingDelay();
             evolutionApiService.sendTextMessage(remoteJid, "⚠️ Opción no válida.");
-            return;
+            return; // Don't save invalid options
         }
 
         try {
@@ -203,6 +211,10 @@ public class WebhookController {
             userSessionService.putSessionData(remoteJid, "menu_option_" + index, "TYPE:LIC_PROF");
             index++;
         }
+
+        menu.append(index).append(". Preguntas Frecuentes\n");
+        userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:FAQ");
+        index++;
 
         menu.append(index).append(". Contacto con el equipo IGSM - UTN\n");
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:CONTACT");
@@ -255,12 +267,40 @@ public class WebhookController {
         evolutionApiService.sendTextMessage(remoteJid, menu.toString());
     }
 
+    private void showFaqMenu(String remoteJid) {
+        userSessionService.setUserState(remoteJid, "WAITING_FAQ_SELECTION");
+        String faqMenu = faqService.generateFaqMenu() + "\n0️⃣ *Volver al Menú Principal*";
+        simulateTypingDelay();
+        evolutionApiService.sendTextMessage(remoteJid, faqMenu);
+    }
+
+    private void handleFaqSelection(String remoteJid, String text) {
+        if ("0".equals(text)) {
+            showMainMenu(remoteJid);
+            return;
+        }
+
+        try {
+            int selection = Integer.parseInt(text);
+            String answer = faqService.getFaqAnswer(selection);
+            simulateTypingDelay();
+            evolutionApiService.sendTextMessage(remoteJid, answer + "\n\n0️⃣ *Volver al Menú Principal*");
+        } catch (NumberFormatException e) {
+            simulateTypingDelay();
+            evolutionApiService.sendTextMessage(remoteJid, "⚠️ Por favor, ingresa un número válido.");
+        }
+    }
+
+    private void handleReply(String remoteJid, String text, String msgId) {
+        saveReplyAsConsultation(remoteJid, text, msgId);
+    }
+
     // --- MÉTODOS DE APOYO MANTENIDOS ---
     private void startContactFlow(String remoteJid) {
         userSessionService.setUserState(remoteJid, "WAITING_MESSAGE_BODY");
         simulateTypingDelay();
         evolutionApiService.sendTextMessage(remoteJid,
-                "📞 *Contacto*\n\nPor favor, escribí tu consulta y un asesor te responderá a la brevedad.");
+                "📞 *Contacto*\n\nPor favor, escribí tu consulta y un miembro del equipo te responderá a la brevedad.");
     }
 
     private void saveInquiry(String remoteJid, com.igsm.chatbot.model.Diplomatura diplo) {
