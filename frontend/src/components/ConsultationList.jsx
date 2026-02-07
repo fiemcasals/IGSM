@@ -37,6 +37,7 @@ const ConsultationList = () => {
     }, []);
 
     useEffect(() => {
+        const params = new URLSearchParams(location.search);
         const id = params.get('teamMemberId');
         setTeamMemberId(id ? parseInt(id) : null);
         setSelectedUser(null); // Deselect when switching views
