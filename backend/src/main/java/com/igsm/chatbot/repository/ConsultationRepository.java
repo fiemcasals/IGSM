@@ -13,4 +13,7 @@ public interface ConsultationRepository extends JpaRepository<Consultation, Long
     List<Consultation> findByUserId(String userId);
 
     List<Consultation> findBySeenFalse();
+
+    @org.springframework.data.jpa.repository.Query("SELECT c FROM Consultation c WHERE c.timestamp = (SELECT MAX(c2.timestamp) FROM Consultation c2 WHERE c2.userId = c.userId)")
+    List<Consultation> findLatestConsultations();
 }

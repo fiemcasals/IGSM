@@ -83,21 +83,19 @@ public class TeamController {
     public Map<Long, Long> getTeamStats() {
         Map<Long, Long> stats = new java.util.HashMap<>();
 
-        List<Consultation> unread = consultationRepository.findBySeenFalse();
-        // Count unique unread THREADS (users), not just messages
-        java.util.Set<String> unreadUsers = new java.util.HashSet<>();
+        // Get the LATEST message for each conversation
+        List<Consultation> latestMessages = consultationRepository.findLatestConsultations();
 
-        for (Consultation c : unread) {
-            unreadUsers.add(c.getUserId());
-        }
-
-        for (String userId : unreadUsers) {
-            ContactProfile profile = contactProfileRepository.findById(userId).orElse(null);
-            if (profile != null && profile.getAssignedMember() != null) {
-                stats.merge(profile.getAssignedMember().getId(), 1L, Long::sum);
-            } else {
-                // Unassigned
-                stats.merge(0L, 1L, Long::sum);
+        for (Consultation c : latestMessages) {
+            // Count ONLY if the last message is NOT from admin (i.e. waiting for reply)
+            if (!c.isAdminReply()) {
+                ContactProfile profile = contactProfileRepository.findById(c.getUserId()).orElse(null);
+                if (profile != null && profile.getAssignedMember() != null) {
+                    stats.merge(profile.getAssignedMember().getId(), 1L, Long::sum);
+                } else {
+                    // Unassigned
+                    stats.merge(0L, 1L, Long::sum);
+                }
             }
         }
 

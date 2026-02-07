@@ -167,10 +167,6 @@ const ConsultationList = () => {
             };
         }
         acc[curr.userId].messages.push(curr);
-
-        if (!curr.seen && !curr.adminReply) {
-            acc[curr.userId].unreadCount++;
-        }
         return acc;
     }, {});
 
@@ -178,6 +174,17 @@ const ConsultationList = () => {
     const sortedThreads = Object.values(threads).map(thread => {
         thread.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
         thread.lastMessage = thread.messages[thread.messages.length - 1];
+
+        // Calculate unread count (messages since last admin reply)
+        let count = 0;
+        for (let i = thread.messages.length - 1; i >= 0; i--) {
+            if (thread.messages[i].adminReply) {
+                break;
+            }
+            count++;
+        }
+        thread.unreadCount = count;
+
         return thread;
     }).sort((a, b) => new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp));
 
