@@ -232,27 +232,23 @@ const ConsultationList = () => {
             .catch(console.error);
     };
 
-    const handleSendEmail = () => {
-        if (!selectedTagFilter) {
-            alert("Selecciona una etiqueta primero para filtrar destinatarios.");
-            return;
-        }
-        if (!emailData.subject.trim() || !emailData.body.trim()) {
-            alert("Completa asunto y mensaje.");
-            return;
-        }
+    const handleStartCampaign = () => {
+        if (!campaignData.name || !campaignData.templateId) return alert("Completa nombre y plantilla");
 
-        if (!window.confirm(`¿Enviar correo a todos los usuarios con la etiqueta seleccionada?`)) return;
-
-        axios.post(`/api/tags/${selectedTagFilter}/email`, emailData)
+        axios.post('/api/campaigns', {
+            ...campaignData,
+            tagId: selectedTagFilter,
+            templateId: parseInt(campaignData.templateId)
+        })
             .then(res => {
-                alert(res.data);
-                setShowEmailModal(false);
-                setEmailData({ subject: "", body: "" });
+                alert("Campaña iniciada: " + res.data.name);
+                setShowCampaignModal(false);
+                fetchCampaigns();
+                setCampaignData({ name: "", subject: "", body: "", templateId: "", batchSize: 10, intervalSeconds: 60 });
             })
             .catch(err => {
                 console.error(err);
-                alert("Error al enviar correos: " + (err.response?.data || err.message));
+                alert("Error al iniciar campaña: " + (err.response?.data || err.message));
             });
     };
 
@@ -353,6 +349,7 @@ const ConsultationList = () => {
         // Tag Filter
         if (selectedTagFilter) {
             const hasTag = thread.profile?.tags?.some(t => t.id.toString() === selectedTagFilter);
+
             return matchesSearch && hasTag;
         }
 
@@ -397,11 +394,12 @@ const ConsultationList = () => {
                     {/* Email Button */}
                     <div className="mt-2 px-1">
                         <button
+                            disabled={!selectedTagFilter}
                             onClick={() => {
                                 setCampaignData({ ...campaignData, name: `Campaña ${tags.find(t => t.id.toString() === selectedTagFilter)?.name}` });
                                 setShowCampaignModal(true);
                             }}
-                            className="w-full bg-green-600 text-white text-sm py-1 rounded hover:bg-green-700 flex justify-center items-center gap-2"
+                            className={`w-full text-sm py-1 rounded flex justify-center items-center gap-2 ${selectedTagFilter ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                         >
                             <Mail size={14} /> Crear Campaña
                         </button>

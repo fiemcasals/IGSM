@@ -69,14 +69,15 @@ public class TagController {
         String remoteJid = (String) payload.get("remoteJid");
         Long tagId = ((Number) payload.get("tagId")).longValue();
 
-        return contactProfileRepository.findById(remoteJid).map(profile -> {
-            return tagRepository.findById(tagId).map(tag -> {
-                if (!profile.getTags().contains(tag)) {
-                    profile.getTags().add(tag);
-                    contactProfileRepository.save(profile);
-                }
-                return ResponseEntity.ok(profile);
-            }).orElse(ResponseEntity.notFound().build());
+        ContactProfile profile = contactProfileRepository.findById(remoteJid)
+                .orElse(new ContactProfile(remoteJid));
+
+        return tagRepository.findById(tagId).map(tag -> {
+            if (!profile.getTags().contains(tag)) {
+                profile.getTags().add(tag);
+                contactProfileRepository.save(profile);
+            }
+            return ResponseEntity.ok(profile);
         }).orElse(ResponseEntity.notFound().build());
     }
 
