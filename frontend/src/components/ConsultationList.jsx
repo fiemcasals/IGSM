@@ -946,10 +946,8 @@ const ConsultationList = () => {
             </div>
         </div>
     )
-}
-
-    </div >
-    );
 };
+
+
 
 export default ConsultationList;
