@@ -28,6 +28,9 @@ public class StatsController {
     @Autowired
     private SubscriptionRepository subscriptionRepository;
 
+    @Autowired
+    private com.igsm.chatbot.repository.ContactProfileRepository contactProfileRepository;
+
     @GetMapping
     public Map<String, Object> getStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -55,26 +58,68 @@ public class StatsController {
     @GetMapping("/export")
     public org.springframework.http.ResponseEntity<String> exportStats() {
         StringBuilder csv = new StringBuilder();
-        csv.append("ID,Nombre,Descripcion,Consultas,Inscripciones\n");
+        // Updated Header: Detailed Lead Info
+        csv.append("Fecha,Teléfono,Email,Interés (Carrera),Tipo\n");
 
-        List<com.igsm.chatbot.model.Diplomatura> diplos = diplomaturaRepository.findAll();
-        // Sort by ID
-        diplos.sort((d1, d2) -> d1.getId().compareTo(d2.getId()));
+        // 1. Get all Inquiries (Interests)
+        List<com.igsm.chatbot.model.Inquiry> inquiries = inquiryRepository.findAll();
 
-        for (com.igsm.chatbot.model.Diplomatura d : diplos) {
-            long inquiries = inquiryRepository.countByDiplomaturaId(d.getId());
-            long subscriptions = subscriptionRepository.countByDiplomaturaId(d.getId());
+        // Pre-fetch profiles for performance (or query individually if list is small)
+        Map<String, com.igsm.chatbot.model.ContactProfile> profiles = contactProfileRepository.findAll().stream()
+                .collect(Collectors.toMap(com.igsm.chatbot.model.ContactProfile::getRemoteJid, p -> p));
 
-            csv.append(d.getId()).append(",")
-                    .append("\"").append(d.getName().replace("\"", "\"\"")).append("\",")
-                    .append("\"").append(d.getDescription().replace("\"", "\"\"")).append("\",")
-                    .append(inquiries).append(",")
-                    .append(subscriptions).append("\n");
+        // Format Date
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+        for (com.igsm.chatbot.model.Inquiry inq : inquiries) {
+            String phone = inq.getContactPhone();
+            String email = "";
+            String course = inq.getDiplomatura() != null ? inq.getDiplomatura().getName() : "Desconocido";
+            String type = inq.getDiplomatura() != null ? inq.getDiplomatura().getType() : "";
+
+            // Try to find email in Profile
+            if (profiles.containsKey(inq.getUserId())) {
+                String e = profiles.get(inq.getUserId()).getEmail();
+                if (e != null)
+                    email = e;
+            }
+
+            csv.append(inq.getTimestamp().format(formatter)).append(",")
+                    .append(phone).append(",")
+                    .append(email).append(",")
+                    .append("\"").append(course.replace("\"", "\"\"")).append("\",")
+                    .append(type).append("\n");
+        }
+
+        // Optional: Append Subscriptions as well?
+        // User asked "a que oferta academica se anotaron", which could mean Inquiries
+        // OR Subscriptions.
+        // Let's add Subscriptions too, marked as "INSCRIPCION".
+
+        List<com.igsm.chatbot.model.Subscription> subs = subscriptionRepository.findAll();
+        for (com.igsm.chatbot.model.Subscription s : subs) {
+            String phone = s.getPhone();
+            // Subscription has its own mail field, but fallback to profile if empty
+            String email = s.getMail();
+            if (email == null || email.isEmpty()) {
+                if (profiles.containsKey(s.getUserId())) {
+                    String e = profiles.get(s.getUserId()).getEmail();
+                    if (e != null)
+                        email = e;
+                }
+            }
+            String course = s.getDiplomatura() != null ? s.getDiplomatura().getName() : "Desconocido";
+
+            csv.append(s.getTimestamp().format(formatter)).append(",")
+                    .append(phone).append(",")
+                    .append(email != null ? email : "").append(",")
+                    .append("\"").append(course.replace("\"", "\"\"")).append("\",")
+                    .append("INSCRIPCION_CONFIRMADA").append("\n");
         }
 
         return org.springframework.http.ResponseEntity.ok()
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"diplomaturas_stats.csv\"")
+                        "attachment; filename=\"reporte_interesados.csv\"")
                 .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
                 .body(csv.toString());
     }

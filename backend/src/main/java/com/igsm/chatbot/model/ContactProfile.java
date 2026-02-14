@@ -11,6 +11,7 @@ public class ContactProfile {
     private String remoteJid; // PK matches userId in Consultations
 
     private String nickname;
+    private String email;
 
     @ManyToOne
     @JoinColumn(name = "team_member_id")

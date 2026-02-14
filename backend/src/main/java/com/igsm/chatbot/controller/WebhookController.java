@@ -35,6 +35,9 @@ public class WebhookController {
     @Autowired
     private com.igsm.chatbot.service.FaqService faqService;
 
+    @Autowired
+    private com.igsm.chatbot.repository.ContactProfileRepository contactProfileRepository;
+
     @PostMapping("/evolution")
     public void receiveMessage(@RequestBody Map<String, Object> payload) {
         try {
@@ -119,6 +122,10 @@ public class WebhookController {
             handleReply(remoteJid, text, msgId);
         else if ("WAITING_FAQ_SELECTION".equals(state))
             handleFaqSelection(remoteJid, text);
+        else if ("WAITING_FAQ_READING".equals(state))
+            handleFaqReading(remoteJid, text);
+        else if ("WAITING_EMAIL".equals(state))
+            handleEmailInput(remoteJid, text);
         else {
             showMainMenu(remoteJid);
         }
@@ -137,6 +144,10 @@ public class WebhookController {
             showFaqMenu(remoteJid);
         } else if (optionData.equals("STATIC:CONTACT")) {
             startContactFlow(remoteJid);
+        } else if (optionData.equals("STATIC:CONTACT")) {
+            startContactFlow(remoteJid);
+        } else if (optionData.equals("STATIC:EMAIL")) {
+            startEmailFlow(remoteJid);
         } else if (optionData.equals("STATIC:EXIT")) {
             exitConversation(remoteJid);
         }
@@ -185,7 +196,7 @@ public class WebhookController {
         userSessionService.removeSessionData(remoteJid, "is_viewing_detail");
 
         StringBuilder menu = new StringBuilder(
-                "Bienvenido a nuestro asistente virtual 👋🏻\nSelecciona una opción:\n\n");
+                "Bienvenido a nuestro asistente virtual 👋🏻\n\n📢 *No olvides registrar tu correo (Opción 6) para mantenerte actualizado.*\n\nSelecciona una opción:\n\n");
         List<com.igsm.chatbot.model.Diplomatura> allDiplos = diplomaturaRepository.findAll();
 
         // Agrupamos para saber qué categorías mostrar
@@ -216,6 +227,10 @@ public class WebhookController {
 
         menu.append(index).append(". Contacto con el equipo IGSM - UTN\n");
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:CONTACT");
+        index++;
+
+        menu.append(index).append(". Registrar e-mail para recibir información reciente\n");
+        userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:EMAIL");
         index++;
 
         menu.append(index).append(". Finalizar conversación");
@@ -281,11 +296,25 @@ public class WebhookController {
         try {
             int selection = Integer.parseInt(text);
             String answer = faqService.getFaqAnswer(selection);
+            userSessionService.setUserState(remoteJid, "WAITING_FAQ_READING");
             simulateTypingDelay();
-            evolutionApiService.sendTextMessage(remoteJid, answer + "\n\n0️⃣ *Volver al Menú Principal*");
+            evolutionApiService.sendTextMessage(remoteJid,
+                    answer + "\n\n1️⃣ *Volver a Preguntas Frecuentes*\n0️⃣ *Volver al Menú Principal*");
         } catch (NumberFormatException e) {
             simulateTypingDelay();
             evolutionApiService.sendTextMessage(remoteJid, "⚠️ Por favor, ingresa un número válido.");
+        }
+    }
+
+    private void handleFaqReading(String remoteJid, String text) {
+        if ("0".equals(text)) {
+            showMainMenu(remoteJid);
+        } else if ("1".equals(text)) {
+            showFaqMenu(remoteJid);
+        } else {
+            simulateTypingDelay();
+            evolutionApiService.sendTextMessage(remoteJid,
+                    "⚠️ Opción no válida.\n\n1️⃣ *Volver a Preguntas Frecuentes*\n0️⃣ *Volver al Menú Principal*");
         }
     }
 
@@ -334,6 +363,47 @@ public class WebhookController {
             userSessionService.setUserState(remoteJid, "WAITING_MESSAGE_BODY");
         } catch (Exception e) {
             logger.error("Error saving consultation", e);
+        }
+    }
+
+    private void startEmailFlow(String remoteJid) {
+        userSessionService.setUserState(remoteJid, "WAITING_EMAIL");
+        simulateTypingDelay();
+        evolutionApiService.sendTextMessage(remoteJid,
+                "📧 *Registro de Email*\n\nPor favor, ingresá tu dirección de correo electrónico a continuación:");
+    }
+
+    private void handleEmailInput(String remoteJid, String text) {
+        if ("0".equals(text.trim())) {
+            showMainMenu(remoteJid);
+            return;
+        }
+
+        // Basic validation
+        if (!text.contains("@") || !text.contains(".")) {
+            simulateTypingDelay();
+            evolutionApiService.sendTextMessage(remoteJid,
+                    "⚠️ El formato del correo no parece válido. Intentalo de nuevo o escribí 0 para salir.");
+            return;
+        }
+
+        try {
+            com.igsm.chatbot.model.ContactProfile profile = contactProfileRepository.findById(remoteJid)
+                    .orElse(new com.igsm.chatbot.model.ContactProfile(remoteJid));
+
+            profile.setEmail(text.trim());
+            contactProfileRepository.save(profile);
+
+            simulateTypingDelay();
+            evolutionApiService.sendTextMessage(remoteJid,
+                    "✅ *¡Correo registrado con éxito!*\n\nTe mantendremos al tanto de las novedades.\n\n");
+
+            showMainMenu(remoteJid);
+
+        } catch (Exception e) {
+            logger.error("Error saving email", e);
+            evolutionApiService.sendTextMessage(remoteJid, "❌ Error al guardar. Intenta de nuevo más tarde.");
+            showMainMenu(remoteJid);
         }
     }
 
