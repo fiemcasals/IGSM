@@ -394,12 +394,17 @@ const ConsultationList = () => {
                     {/* Email Button */}
                     <div className="mt-2 px-1">
                         <button
-                            disabled={!selectedTagFilter}
                             onClick={() => {
-                                setCampaignData({ ...campaignData, name: `Campaña ${tags.find(t => t.id.toString() === selectedTagFilter)?.name}` });
+                                setCampaignData({
+                                    ...campaignData,
+                                    name: selectedTagFilter ? `Campaña ${tags.find(t => t.id.toString() === selectedTagFilter)?.name}` : "",
+                                    intervalValue: 60,
+                                    intervalMultiplier: 1,
+                                    intervalSeconds: 60
+                                });
                                 setShowCampaignModal(true);
                             }}
-                            className={`w-full text-sm py-1 rounded flex justify-center items-center gap-2 ${selectedTagFilter ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                            className="w-full bg-green-600 text-white text-sm py-1 rounded hover:bg-green-700 flex justify-center items-center gap-2"
                         >
                             <Mail size={14} /> Crear Campaña
                         </button>
@@ -795,12 +800,32 @@ const ConsultationList = () => {
 
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Campaña</label>
-                            <input
-                                type="text"
-                                className="w-full border rounded p-2"
-                                value={campaignData.name}
-                                onChange={(e) => setCampaignData({ ...campaignData, name: e.target.value })}
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2"
+                                    placeholder="Ej: Promo Octubre"
+                                    value={campaignData.name}
+                                    onChange={(e) => setCampaignData({ ...campaignData, name: e.target.value })}
+                                />
+                                <select
+                                    className="border rounded p-2 w-1/3"
+                                    value={selectedTagFilter || ""}
+                                    onChange={(e) => {
+                                        setSelectedTagFilter(e.target.value);
+                                        // Update default name if empty
+                                        if (!campaignData.name) {
+                                            setCampaignData({ ...campaignData, name: `Campaña ${tags.find(t => t.id.toString() === e.target.value)?.name || ''}` });
+                                        }
+                                    }}
+                                >
+                                    <option value="">Seleccionar Etiqueta...</option>
+                                    {tags.map(t => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            {!selectedTagFilter && <p className="text-xs text-red-500 mt-1">* Debes seleccionar una etiqueta destinataria.</p>}
                         </div>
 
                         <div className="mb-4">
@@ -836,13 +861,36 @@ const ConsultationList = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Intervalo (Seg)</label>
-                                <input
-                                    type="number"
-                                    className="w-full border rounded p-2"
-                                    value={campaignData.intervalSeconds}
-                                    onChange={(e) => setCampaignData({ ...campaignData, intervalSeconds: e.target.value })}
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Intervalo</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="number"
+                                        className="w-20 border rounded p-2"
+                                        value={campaignData.intervalValue || 60}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            const mult = campaignData.intervalMultiplier || 1;
+                                            setCampaignData({ ...campaignData, intervalValue: val, intervalSeconds: val * mult });
+                                        }}
+                                    />
+                                    <select
+                                        className="flex-1 border rounded p-2"
+                                        value={campaignData.intervalMultiplier || 1}
+                                        onChange={(e) => {
+                                            const mult = parseInt(e.target.value);
+                                            const val = campaignData.intervalValue || 60;
+                                            setCampaignData({
+                                                ...campaignData,
+                                                intervalMultiplier: mult,
+                                                intervalSeconds: val * mult
+                                            });
+                                        }}
+                                    >
+                                        <option value="1">Segundos</option>
+                                        <option value="60">Minutos</option>
+                                        <option value="3600">Horas</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 

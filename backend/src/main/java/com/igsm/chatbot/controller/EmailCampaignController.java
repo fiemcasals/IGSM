@@ -30,10 +30,10 @@ public class EmailCampaignController {
     public ResponseEntity<?> createAndStart(@RequestBody Map<String, Object> payload) {
         try {
             String name = (String) payload.get("name");
-            Long tagId = ((Number) payload.get("tagId")).longValue();
-            Long templateId = ((Number) payload.get("templateId")).longValue();
-            int batchSize = ((Number) payload.getOrDefault("batchSize", 10)).intValue();
-            int interval = ((Number) payload.getOrDefault("intervalSeconds", 60)).intValue();
+            Long tagId = Long.parseLong(payload.get("tagId").toString());
+            Long templateId = Long.parseLong(payload.get("templateId").toString());
+            int batchSize = Integer.parseInt(payload.getOrDefault("batchSize", 10).toString());
+            int interval = Integer.parseInt(payload.getOrDefault("intervalSeconds", 60).toString());
 
             EmailCampaign campaign = campaignService.createCampaign(name, tagId, templateId, batchSize, interval);
             campaignService.startCampaign(campaign.getId());
