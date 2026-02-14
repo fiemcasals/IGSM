@@ -196,7 +196,7 @@ public class WebhookController {
         userSessionService.removeSessionData(remoteJid, "is_viewing_detail");
 
         StringBuilder menu = new StringBuilder(
-                "Bienvenido a nuestro asistente virtual 👋🏻\n\n📢 *No olvides registrar tu correo (Opción 6) para mantenerte actualizado.*\n\nSelecciona una opción:\n\n");
+                "Bienvenido a nuestro asistente virtual 👋🏻\nSelecciona una opción:\n\n");
         List<com.igsm.chatbot.model.Diplomatura> allDiplos = diplomaturaRepository.findAll();
 
         // Agrupamos para saber qué categorías mostrar
@@ -229,7 +229,7 @@ public class WebhookController {
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:CONTACT");
         index++;
 
-        menu.append(index).append(". Registrar e-mail para recibir información reciente\n");
+        menu.append(index).append(". 📢 Registrar e-mail para recibir información reciente\n");
         userSessionService.putSessionData(remoteJid, "menu_option_" + index, "STATIC:EMAIL");
         index++;
 

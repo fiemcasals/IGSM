@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X, Edit2, Users, Trash2, Mail, CornerUpLeft } from 'lucide-react';
+import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X, Edit2, Users, Trash2, Mail, CornerUpLeft, Tag } from 'lucide-react';
 
 const ConsultationList = () => {
     const [consultations, setConsultations] = useState([]);
@@ -22,6 +22,26 @@ const ConsultationList = () => {
     // FAQ Modal State
     const [showFaqModal, setShowFaqModal] = useState(false);
     const [faqData, setFaqData] = useState({ question: "", answer: "" });
+
+    // Email/Campaign State
+    const [showCampaignModal, setShowCampaignModal] = useState(false);
+    const [campaignData, setCampaignData] = useState({
+        name: "",
+        subject: "",
+        body: "",
+        templateId: "",
+        batchSize: 10,
+        intervalSeconds: 60
+    });
+    const [templates, setTemplates] = useState([]);
+    const [campaigns, setCampaigns] = useState([]);
+    const [showTemplateManager, setShowTemplateManager] = useState(false);
+
+    // Tagging State
+    const [tags, setTags] = useState([]);
+    const [selectedTagFilter, setSelectedTagFilter] = useState("");
+    const [showTagModal, setShowTagModal] = useState(false); // For managing tags on a user
+    const [newTagName, setNewTagName] = useState("");
 
     const messagesEndRef = useRef(null);
 
@@ -82,7 +102,57 @@ const ConsultationList = () => {
             res.data.forEach(p => map[p.remoteJid] = p);
             setContactProfiles(map);
         }).catch(console.error);
+        fetchTags();
     }
+
+    const fetchTags = () => {
+        axios.get('/api/tags').then(res => setTags(res.data)).catch(console.error);
+        fetchTemplates();
+        fetchCampaigns();
+    };
+
+    const fetchTemplates = () => {
+        axios.get('/api/email-templates').then(res => setTemplates(res.data)).catch(console.error);
+    };
+
+    const fetchCampaigns = () => {
+        axios.get('/api/campaigns').then(res => setCampaigns(res.data)).catch(console.error);
+    };
+
+    // Refresh campaigns periodically to show progress
+    useEffect(() => {
+        const interval = setInterval(fetchCampaigns, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleCreateTag = (name) => {
+        if (!name.trim()) return;
+        axios.post('/api/tags', { name: name, color: 'blue' })
+            .then(res => {
+                setTags([...tags, res.data]);
+                setNewTagName("");
+                // If we were in the modal, we might want to auto-assign too, but let's keep it simple
+            })
+            .catch(console.error);
+    };
+
+    const handleAssignTag = (remoteJid, tagId) => {
+        axios.post('/api/tags/assign', { remoteJid, tagId })
+            .then(res => {
+                // Update profile in local state
+                setContactProfiles(prev => ({ ...prev, [remoteJid]: res.data }));
+                fetchConsultations(); // refresh
+            }).catch(console.error);
+    };
+
+    const handleRemoveTag = (remoteJid, tagId) => {
+        axios.post('/api/tags/remove', { remoteJid, tagId })
+            .then(res => {
+                // Update profile in local state
+                setContactProfiles(prev => ({ ...prev, [remoteJid]: res.data }));
+                fetchConsultations(); // refresh
+            }).catch(console.error);
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -160,6 +230,30 @@ const ConsultationList = () => {
                 fetchConsultations(); // Refresh to update view if filtering
             })
             .catch(console.error);
+    };
+
+    const handleSendEmail = () => {
+        if (!selectedTagFilter) {
+            alert("Selecciona una etiqueta primero para filtrar destinatarios.");
+            return;
+        }
+        if (!emailData.subject.trim() || !emailData.body.trim()) {
+            alert("Completa asunto y mensaje.");
+            return;
+        }
+
+        if (!window.confirm(`¿Enviar correo a todos los usuarios con la etiqueta seleccionada?`)) return;
+
+        axios.post(`/api/tags/${selectedTagFilter}/email`, emailData)
+            .then(res => {
+                alert(res.data);
+                setShowEmailModal(false);
+                setEmailData({ subject: "", body: "" });
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Error al enviar correos: " + (err.response?.data || err.message));
+            });
     };
 
     const handleDeleteConversation = (userId, e) => {
@@ -255,6 +349,13 @@ const ConsultationList = () => {
         if (teamMemberId) {
             return matchesSearch && thread.profile?.assignedMember?.id === teamMemberId;
         }
+
+        // Tag Filter
+        if (selectedTagFilter) {
+            const hasTag = thread.profile?.tags?.some(t => t.id.toString() === selectedTagFilter);
+            return matchesSearch && hasTag;
+        }
+
         return matchesSearch;
     });
 
@@ -280,6 +381,56 @@ const ConsultationList = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    {/* Tag Filter Dropdown */}
+                    <div className="mt-2 px-1">
+                        <select
+                            className="w-full text-sm border-gray-300 rounded p-1"
+                            value={selectedTagFilter}
+                            onChange={(e) => setSelectedTagFilter(e.target.value)}
+                        >
+                            <option value="">Filtrar por Etiqueta...</option>
+                            {tags.map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    {/* Email Button */}
+                    <div className="mt-2 px-1">
+                        <button
+                            onClick={() => {
+                                setCampaignData({ ...campaignData, name: `Campaña ${tags.find(t => t.id.toString() === selectedTagFilter)?.name}` });
+                                setShowCampaignModal(true);
+                            }}
+                            className="w-full bg-green-600 text-white text-sm py-1 rounded hover:bg-green-700 flex justify-center items-center gap-2"
+                        >
+                            <Mail size={14} /> Crear Campaña
+                        </button>
+                    </div>
+
+
+                    {/* Active Campaigns Mini-Dashboard */}
+                    {campaigns.length > 0 && (
+                        <div className="mt-4 px-1 border-t pt-2">
+                            <h4 className="text-xs font-bold text-gray-500 mb-2 uppercase">Campañas Activas</h4>
+                            <div className="space-y-2">
+                                {campaigns.filter(c => c.status === 'RUNNING' || c.status === 'PAUSED').map(c => (
+                                    <div key={c.id} className="bg-gray-50 p-2 rounded border text-xs">
+                                        <div className="flex justify-between font-bold text-gray-700">
+                                            <span>{c.name}</span>
+                                            <span className={`px-1 rounded ${c.status === 'RUNNING' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{c.status}</span>
+                                        </div>
+                                        <div className="mt-1 flex justify-between text-gray-500">
+                                            <span>{c.sentCount} / {c.totalRecipients}</span>
+                                            <span>{Math.round((c.sentCount / c.totalRecipients) * 100)}%</span>
+                                        </div>
+                                        <div className="h-1 w-full bg-gray-200 rounded mt-1 overflow-hidden">
+                                            <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${(c.sentCount / c.totalRecipients) * 100}%` }}></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
@@ -391,6 +542,22 @@ const ConsultationList = () => {
                             </div>
                         </div>
 
+
+
+                        {/* Tag Bar */}
+                        <div className="px-4 py-2 bg-white border-b border-gray-100 flex items-center gap-2 flex-wrap">
+                            <Tag size={16} className="text-gray-400" />
+                            {activeThread.profile?.tags?.map(tag => (
+                                <span key={tag.id} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                    {tag.name}
+                                    <button onClick={() => handleRemoveTag(activeThread.userId, tag.id)} className="hover:text-red-500">×</button>
+                                </span>
+                            ))}
+                            <button onClick={() => setShowTagModal(true)} className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                + Etiqueta
+                            </button>
+                        </div>
+
                         {/* Messages */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-4">
                             {activeThread.messages.map((msg, index) => (
@@ -482,74 +649,306 @@ const ConsultationList = () => {
             </div>
 
             {/* FAQ Modal */}
-            {showFaqModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold">Crear Pregunta Frecuente</h3>
-                            <button onClick={() => setShowFaqModal(false)} className="text-gray-500 hover:text-gray-700">
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Pregunta (del usuario)</label>
-                            <textarea
-                                className="w-full border rounded p-2 bg-gray-50"
-                                rows="3"
-                                value={faqData.question}
-                                onChange={(e) => setFaqData({ ...faqData, question: e.target.value })}
-                            />
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Respuesta (tuya)</label>
-                            <textarea
-                                className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                rows="4"
-                                value={faqData.answer}
-                                onChange={(e) => setFaqData({ ...faqData, answer: e.target.value })}
-                                placeholder="Escribe la respuesta aquí..."
-                                autoFocus
-                            />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <button
-                                onClick={() => setShowFaqModal(false)}
-                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleSaveFAQ}
-                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                            >
-                                Guardar y Cerrar
-                            </button>
+            {
+                showFaqModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-bold">Crear Pregunta Frecuente</h3>
+                                <button onClick={() => setShowFaqModal(false)} className="text-gray-500 hover:text-gray-700">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Pregunta (del usuario)</label>
+                                <textarea
+                                    className="w-full border rounded p-2 bg-gray-50"
+                                    rows="3"
+                                    value={faqData.question}
+                                    onChange={(e) => setFaqData({ ...faqData, question: e.target.value })}
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Respuesta (tuya)</label>
+                                <textarea
+                                    className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    rows="4"
+                                    value={faqData.answer}
+                                    onChange={(e) => setFaqData({ ...faqData, answer: e.target.value })}
+                                    placeholder="Escribe la respuesta aquí..."
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={() => setShowFaqModal(false)}
+                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleSaveFAQ}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                                >
+                                    Guardar y Cerrar
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Nickname Modal */}
-            {showNicknameModal && (
+            {
+                showNicknameModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+                            <h3 className="text-lg font-bold mb-4">Editar Nombre</h3>
+                            <input
+                                type="text"
+                                className="w-full border p-2 rounded mb-4"
+                                placeholder="Nombre / Apodo"
+                                value={nicknameData.nickname}
+                                onChange={(e) => setNicknameData({ ...nicknameData, nickname: e.target.value })}
+                                autoFocus
+                            />
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => setShowNicknameModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                                <button onClick={handleNickname} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Tag Management Modal */}
+            {
+                showTagModal && activeThread && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-bold">Gestionar Etiquetas</h3>
+                                <button onClick={() => setShowTagModal(false)} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
+                            </div>
+
+                            <div className="mb-4">
+                                <h4 className="text-sm font-semibold text-gray-600 mb-2">Asignadas:</h4>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {activeThread.profile?.tags?.length > 0 ? (
+                                        activeThread.profile.tags.map(tag => (
+                                            <span key={tag.id} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                                {tag.name}
+                                                <button onClick={() => handleRemoveTag(activeThread.userId, tag.id)} className="hover:text-red-500">×</button>
+                                            </span>
+                                        ))
+                                    ) : <span className="text-sm text-gray-400 italic">Sin etiquetas</span>}
+                                </div>
+
+                                <h4 className="text-sm font-semibold text-gray-600 mb-2">Disponibles:</h4>
+                                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto border p-2 rounded mb-4">
+                                    {tags.filter(t => !activeThread.profile?.tags?.some(pt => pt.id === t.id)).map(tag => (
+                                        <button
+                                            key={tag.id}
+                                            onClick={() => handleAssignTag(activeThread.userId, tag.id)}
+                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full"
+                                        >
+                                            + {tag.name}
+                                        </button>
+                                    ))}
+                                    {tags.length === 0 && <span className="text-sm text-gray-400">No hay etiquetas creadas.</span>}
+                                </div>
+
+                                <div className="border-t pt-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nueva Etiqueta</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="flex-1 border p-2 rounded text-sm"
+                                            placeholder="Nombre de etiqueta..."
+                                            value={newTagName}
+                                            onChange={(e) => setNewTagName(e.target.value)}
+                                        />
+                                        <button
+                                            onClick={() => handleCreateTag(newTagName)}
+                                            disabled={!newTagName.trim()}
+                                            className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                                        >
+                                            Crear
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Email Modal */}
+            {/* Campaign Modal */}
+            {showCampaignModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
-                        <h3 className="text-lg font-bold mb-4">Editar Nombre</h3>
-                        <input
-                            type="text"
-                            className="w-full border p-2 rounded mb-4"
-                            placeholder="Nombre / Apodo"
-                            value={nicknameData.nickname}
-                            onChange={(e) => setNicknameData({ ...nicknameData, nickname: e.target.value })}
-                            autoFocus
-                        />
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold flex items-center gap-2">
+                                <Mail size={20} className="text-green-600" /> Crear Campaña de Correo
+                            </h3>
+                            <button onClick={() => setShowCampaignModal(false)} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Campaña</label>
+                            <input
+                                type="text"
+                                className="w-full border rounded p-2"
+                                value={campaignData.name}
+                                onChange={(e) => setCampaignData({ ...campaignData, name: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Plantilla</label>
+                            <div className="flex gap-2">
+                                <select
+                                    className="flex-1 border rounded p-2"
+                                    value={campaignData.templateId}
+                                    onChange={(e) => setCampaignData({ ...campaignData, templateId: e.target.value })}
+                                >
+                                    <option value="">Seleccionar Plantilla...</option>
+                                    {templates.map(t => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={() => setShowTemplateManager(true)}
+                                    className="px-3 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                >
+                                    <Edit2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="mb-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Batch Size (Envíos)</label>
+                                <input
+                                    type="number"
+                                    className="w-full border rounded p-2"
+                                    value={campaignData.batchSize}
+                                    onChange={(e) => setCampaignData({ ...campaignData, batchSize: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Intervalo (Seg)</label>
+                                <input
+                                    type="number"
+                                    className="w-full border rounded p-2"
+                                    value={campaignData.intervalSeconds}
+                                    onChange={(e) => setCampaignData({ ...campaignData, intervalSeconds: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="text-xs text-gray-500 mb-4 bg-yellow-50 p-2 rounded">
+                            <strong>Estimación:</strong> Se enviarán {campaignData.batchSize} correos cada {campaignData.intervalSeconds} segundos.
+                        </div>
+
                         <div className="flex justify-end gap-2">
-                            <button onClick={() => setShowNicknameModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
-                            <button onClick={handleNickname} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Guardar</button>
+                            <button onClick={() => setShowCampaignModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                            <button onClick={handleStartCampaign} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Iniciar Campaña</button>
                         </div>
                     </div>
                 </div>
             )}
         </div>
+    )
+}
+
+{/* Template Manager Modal */ }
+{
+    showTemplateManager && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 h-[80vh] flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold flex items-center gap-2">
+                        <Edit2 size={20} className="text-blue-600" /> Gestionar Plantillas
+                    </h3>
+                    <button onClick={() => setShowTemplateManager(false)} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
+                </div>
+
+                <div className="flex-1 overflow-hidden flex gap-4">
+                    {/* List */}
+                    <div className="w-1/3 border-r pr-4 overflow-y-auto">
+                        <button
+                            onClick={() => {
+                                document.getElementById('tplName').value = "";
+                                document.getElementById('tplSubject').value = "";
+                                document.getElementById('tplBody').value = "";
+                                setCampaignData({ ...campaignData, templateId: "" });
+                            }}
+                            className="w-full text-left p-2 mb-2 bg-blue-50 text-blue-700 rounded text-sm font-bold"
+                        >
+                            + Nueva Plantilla
+                        </button>
+                        {templates.map(t => (
+                            <div key={t.id} className="border-b py-2 cursor-pointer hover:bg-gray-50 p-1"
+                                onClick={() => {
+                                    document.getElementById('tplName').value = t.name;
+                                    document.getElementById('tplSubject').value = t.subject;
+                                    document.getElementById('tplBody').value = t.body;
+                                }}
+                            >
+                                <div className="font-bold text-sm">{t.name}</div>
+                                <div className="text-xs text-gray-500 truncate">{t.subject}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Editor (Simplified for now - just creating new one on backend actually) */}
+                    <div className="w-2/3 flex flex-col gap-3">
+                        <div className="bg-yellow-50 p-2 text-xs text-yellow-800 rounded">
+                            * Crea o edita plantillas para usarlas en tus campañas.
+                        </div>
+                        <input
+                            className="border p-2 rounded"
+                            placeholder="Nombre Interno (ej: Promo Verano)"
+                            id="tplName"
+                        />
+                        <input
+                            className="border p-2 rounded"
+                            placeholder="Asunto del Correo"
+                            id="tplSubject"
+                        />
+                        <textarea
+                            className="border p-2 rounded flex-1"
+                            placeholder="Cuerpo del correo (HTML o Texto)... Usa {{NAME}} para personalizar."
+                            id="tplBody"
+                        ></textarea>
+                        <button
+                            onClick={() => {
+                                const name = document.getElementById('tplName').value;
+                                const subject = document.getElementById('tplSubject').value;
+                                const body = document.getElementById('tplBody').value;
+                                if (!name || !subject || !body) return alert("Completa todos los campos");
+
+                                axios.post('/api/email-templates', { name, subject, body })
+                                    .then(res => {
+                                        alert("Plantilla Guardada");
+                                        fetchTemplates();
+                                        setCampaignData({ ...campaignData, templateId: res.data.id }); // Auto select
+                                    });
+                            }}
+                            className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+                        >
+                            Guardar Plantilla
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+    </div >
     );
 };
 

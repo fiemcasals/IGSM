@@ -17,6 +17,10 @@ public class ContactProfile {
     @JoinColumn(name = "team_member_id")
     private TeamMember assignedMember;
 
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name = "profile_tags", joinColumns = @JoinColumn(name = "profile_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    private java.util.List<Tag> tags = new java.util.ArrayList<>();
+
     public ContactProfile() {
     }
 
