@@ -31,8 +31,13 @@ public class EmailCampaignService {
     @Autowired
     private ContactProfileRepository contactProfileRepository;
 
-    public EmailCampaign createCampaign(String name, Long tagId, Long templateId, int batchSize, int intervalSeconds) {
-        Tag tag = tagRepository.findById(tagId).orElseThrow(() -> new RuntimeException("Tag not found"));
+    public EmailCampaign createCampaign(String name, Long tagId, Long templateId, int batchSize, int intervalSeconds,
+            String manualRecipients) {
+        Tag tag = null;
+        if (tagId != null && tagId > 0) {
+            tag = tagRepository.findById(tagId).orElse(null);
+        }
+
         EmailTemplate template = templateRepository.findById(templateId)
                 .orElseThrow(() -> new RuntimeException("Template not found"));
 
@@ -42,12 +47,19 @@ public class EmailCampaignService {
         campaign.setTemplate(template);
         campaign.setBatchSize(batchSize);
         campaign.setIntervalSeconds(intervalSeconds);
+        campaign.setManualRecipients(manualRecipients);
         campaign.setStatus(CampaignStatus.PENDING);
 
-        // Calculate total recipients initially
-        long count = contactProfileRepository.findAll().stream()
-                .filter(p -> p.getTags().contains(tag) && p.getEmail() != null && !p.getEmail().isEmpty())
-                .count();
+        long count = 0;
+        if (manualRecipients != null && !manualRecipients.trim().isEmpty()) {
+            count = manualRecipients.split(",").length;
+        } else if (tag != null) {
+            Tag finalTag = tag;
+            count = contactProfileRepository.findAll().stream()
+                    .filter(p -> p.getTags().contains(finalTag) && p.getEmail() != null && !p.getEmail().isEmpty())
+                    .count();
+        }
+
         campaign.setTotalRecipients((int) count);
 
         return campaignRepository.save(campaign);

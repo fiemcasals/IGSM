@@ -40,43 +40,55 @@ public class EmailCampaignScheduler {
 
     private void processBatch(EmailCampaign campaign) {
         try {
-            // Get all recipients for this tag
-            // Note: In a real large-scale app, we would paginate DB query.
-            // Here we verify list consistency by re-fetching.
-            List<ContactProfile> allProfiles = contactProfileRepository.findAll().stream()
-                    .filter(p -> p.getTags().contains(campaign.getTag()) && p.getEmail() != null
-                            && !p.getEmail().isEmpty())
-                    .collect(Collectors.toList());
+            List<Recipient> allRecipients;
+
+            if (campaign.getTag() != null) {
+                allRecipients = contactProfileRepository.findAll().stream()
+                        .filter(p -> p.getTags().contains(campaign.getTag()) && p.getEmail() != null
+                                && !p.getEmail().isEmpty())
+                        .map(p -> new Recipient(p.getEmail(), p.getNickname()))
+                        .collect(Collectors.toList());
+            } else if (campaign.getManualRecipients() != null) {
+                allRecipients = java.util.Arrays.stream(campaign.getManualRecipients().split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(email -> new Recipient(email, "Suscriptor"))
+                        .collect(Collectors.toList());
+            } else {
+                // No target
+                campaign.setStatus(CampaignStatus.COMPLETED);
+                campaignRepository.save(campaign);
+                return;
+            }
 
             int start = campaign.getLastProcessedIndex();
-            int end = Math.min(start + campaign.getBatchSize(), allProfiles.size());
+            int end = Math.min(start + campaign.getBatchSize(), allRecipients.size());
 
-            if (start >= allProfiles.size()) {
+            if (start >= allRecipients.size()) {
                 campaign.setStatus(CampaignStatus.COMPLETED);
                 campaign.setCompletedAt(LocalDateTime.now());
                 campaignRepository.save(campaign);
                 return;
             }
 
-            List<ContactProfile> batch = allProfiles.subList(start, end);
+            List<Recipient> batch = allRecipients.subList(start, end);
 
-            for (ContactProfile profile : batch) {
+            for (Recipient recipient : batch) {
                 try {
                     String body = campaign.getTemplate().getBody()
-                            .replace("{{NAME}}", profile.getNickname() != null ? profile.getNickname() : "Usuario");
+                            .replace("{{NAME}}", recipient.name != null ? recipient.name : "Usuario");
 
-                    emailService.sendEmail(profile.getEmail(), campaign.getTemplate().getSubject(), body);
+                    emailService.sendEmail(recipient.email, campaign.getTemplate().getSubject(), body);
                     campaign.setSentCount(campaign.getSentCount() + 1);
                 } catch (Exception e) {
                     campaign.setErrorCount(campaign.getErrorCount() + 1);
-                    campaign.setLastError(e.getMessage());
                 }
             }
 
             campaign.setLastProcessedIndex(end);
             campaign.setNextRunTime(LocalDateTime.now().plusSeconds(campaign.getIntervalSeconds()));
 
-            if (end >= allProfiles.size()) {
+            if (end >= allRecipients.size()) {
                 campaign.setStatus(CampaignStatus.COMPLETED);
                 campaign.setCompletedAt(LocalDateTime.now());
             }
@@ -87,6 +99,16 @@ public class EmailCampaignScheduler {
             campaign.setStatus(CampaignStatus.FAILED);
             campaign.setLastError(e.getMessage());
             campaignRepository.save(campaign);
+        }
+    }
+
+    private static class Recipient {
+        String email;
+        String name;
+
+        Recipient(String email, String name) {
+            this.email = email;
+            this.name = name;
         }
     }
 }

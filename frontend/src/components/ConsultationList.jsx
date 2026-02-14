@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X, Edit2, Users, Trash2, Mail, CornerUpLeft, Tag } from 'lucide-react';
+import { MessageSquare, Send, Search, User, Check, CheckCheck, PlusCircle, X, Edit2, Users, Trash2, Mail, CornerUpLeft, Tag, Play, Pause } from 'lucide-react';
 
 const ConsultationList = () => {
     const [consultations, setConsultations] = useState([]);
@@ -235,21 +235,58 @@ const ConsultationList = () => {
     const handleStartCampaign = () => {
         if (!campaignData.name || !campaignData.templateId) return alert("Completa nombre y plantilla");
 
+        if (campaignData.useManualList) {
+            if (!campaignData.manualRecipients || campaignData.manualRecipients.trim().length < 5) return alert("Ingresa correos válidos");
+        } else {
+            if (!selectedTagFilter) return alert("Selecciona una etiqueta");
+        }
+
         axios.post('/api/campaigns', {
             ...campaignData,
-            tagId: selectedTagFilter,
-            templateId: parseInt(campaignData.templateId)
+            tagId: campaignData.useManualList ? "" : selectedTagFilter,
+            templateId: parseInt(campaignData.templateId),
+            manualRecipients: campaignData.useManualList ? campaignData.manualRecipients : null
         })
             .then(res => {
                 alert("Campaña iniciada: " + res.data.name);
                 setShowCampaignModal(false);
                 fetchCampaigns();
-                setCampaignData({ name: "", subject: "", body: "", templateId: "", batchSize: 10, intervalSeconds: 60 });
+                setCampaignData({
+                    name: "",
+                    subject: "",
+                    body: "",
+                    templateId: "",
+                    batchSize: 10,
+                    intervalSeconds: 60,
+                    intervalValue: 60,
+                    intervalMultiplier: 1,
+                    manualRecipients: "",
+                    useManualList: false
+                });
             })
             .catch(err => {
                 console.error(err);
                 alert("Error al iniciar campaña: " + (err.response?.data || err.message));
             });
+    };
+
+    const handlePauseCampaign = (id) => {
+        axios.post(`/api/campaigns/${id}/pause`)
+            .then(() => fetchCampaigns())
+            .catch(console.error);
+    };
+
+    const handleResumeCampaign = (id) => {
+        axios.post(`/api/campaigns/${id}/resume`)
+            .then(() => fetchCampaigns())
+            .catch(console.error);
+    };
+
+    const handleDeleteCampaign = (id) => {
+        if (!window.confirm("¿Seguro que quieres eliminar esta campaña? Se perderá el historial.")) return;
+        axios.delete(`/api/campaigns/${id}`)
+            .then(() => fetchCampaigns())
+            .catch(console.error);
     };
 
     const handleDeleteConversation = (userId, e) => {
@@ -412,22 +449,40 @@ const ConsultationList = () => {
 
 
                     {/* Active Campaigns Mini-Dashboard */}
+                    {/* Active Campaigns Mini-Dashboard */}
                     {campaigns.length > 0 && (
                         <div className="mt-4 px-1 border-t pt-2">
-                            <h4 className="text-xs font-bold text-gray-500 mb-2 uppercase">Campañas Activas</h4>
-                            <div className="space-y-2">
-                                {campaigns.filter(c => c.status === 'RUNNING' || c.status === 'PAUSED').map(c => (
-                                    <div key={c.id} className="bg-gray-50 p-2 rounded border text-xs">
-                                        <div className="flex justify-between font-bold text-gray-700">
-                                            <span>{c.name}</span>
-                                            <span className={`px-1 rounded ${c.status === 'RUNNING' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{c.status}</span>
+                            <h4 className="text-xs font-bold text-gray-500 mb-2 uppercase">Campañas</h4>
+                            <div className="space-y-2 max-h-60 overflow-y-auto">
+                                {campaigns.sort((a, b) => (a.status === 'RUNNING' ? -1 : 1)).map(c => (
+                                    <div key={c.id} className="bg-gray-50 p-2 rounded border text-xs relative group">
+                                        <div className="flex justify-between font-bold text-gray-700 items-center">
+                                            <span className="truncate max-w-[120px]" title={c.name}>{c.name}</span>
+                                            <span className={`px-1 rounded text-[10px] ${c.status === 'RUNNING' ? 'bg-green-100 text-green-700' : c.status === 'PAUSED' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-200 text-gray-600'}`}>{c.status}</span>
                                         </div>
                                         <div className="mt-1 flex justify-between text-gray-500">
                                             <span>{c.sentCount} / {c.totalRecipients}</span>
-                                            <span>{Math.round((c.sentCount / c.totalRecipients) * 100)}%</span>
+                                            <span>{c.totalRecipients > 0 ? Math.round((c.sentCount / c.totalRecipients) * 100) : 0}%</span>
                                         </div>
                                         <div className="h-1 w-full bg-gray-200 rounded mt-1 overflow-hidden">
-                                            <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${(c.sentCount / c.totalRecipients) * 100}%` }}></div>
+                                            <div className={`h-full transition-all duration-500 ${c.status === 'COMPLETED' ? 'bg-blue-300' : 'bg-blue-500'}`} style={{ width: `${c.totalRecipients > 0 ? (c.sentCount / c.totalRecipients) * 100 : 0}%` }}></div>
+                                        </div>
+
+                                        {/* Controls */}
+                                        <div className="mt-2 flex justify-end gap-2 border-t pt-1">
+                                            {c.status === 'RUNNING' && (
+                                                <button onClick={() => handlePauseCampaign(c.id)} className="text-yellow-600 hover:text-yellow-800" title="Pausar">
+                                                    <Pause size={14} />
+                                                </button>
+                                            )}
+                                            {c.status === 'PAUSED' && (
+                                                <button onClick={() => handleResumeCampaign(c.id)} className="text-green-600 hover:text-green-800" title="Reanudar">
+                                                    <Play size={14} />
+                                                </button>
+                                            )}
+                                            <button onClick={() => handleDeleteCampaign(c.id)} className="text-red-400 hover:text-red-600" title="Eliminar">
+                                                <Trash2 size={14} />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -800,20 +855,44 @@ const ConsultationList = () => {
 
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Nombre de la Campaña</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    className="flex-1 border rounded p-2"
-                                    placeholder="Ej: Promo Octubre"
-                                    value={campaignData.name}
-                                    onChange={(e) => setCampaignData({ ...campaignData, name: e.target.value })}
-                                />
+                            <input
+                                type="text"
+                                className="w-full border rounded p-2 mb-2"
+                                placeholder="Ej: Promo Octubre"
+                                value={campaignData.name}
+                                onChange={(e) => setCampaignData({ ...campaignData, name: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Destinatarios</label>
+                            <div className="flex gap-4 mb-2">
+                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="targetType"
+                                        checked={!campaignData.useManualList}
+                                        onChange={() => setCampaignData({ ...campaignData, useManualList: false })}
+                                    />
+                                    Por Etiqueta
+                                </label>
+                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="targetType"
+                                        checked={campaignData.useManualList}
+                                        onChange={() => setCampaignData({ ...campaignData, useManualList: true })}
+                                    />
+                                    Lista Manual
+                                </label>
+                            </div>
+
+                            {!campaignData.useManualList ? (
                                 <select
-                                    className="border rounded p-2 w-1/3"
+                                    className="w-full border rounded p-2"
                                     value={selectedTagFilter || ""}
                                     onChange={(e) => {
                                         setSelectedTagFilter(e.target.value);
-                                        // Update default name if empty
                                         if (!campaignData.name) {
                                             setCampaignData({ ...campaignData, name: `Campaña ${tags.find(t => t.id.toString() === e.target.value)?.name || ''}` });
                                         }
@@ -824,8 +903,20 @@ const ConsultationList = () => {
                                         <option key={t.id} value={t.id}>{t.name}</option>
                                     ))}
                                 </select>
-                            </div>
-                            {!selectedTagFilter && <p className="text-xs text-red-500 mt-1">* Debes seleccionar una etiqueta destinataria.</p>}
+                            ) : (
+                                <div>
+                                    <textarea
+                                        className="w-full border rounded p-2 h-24 text-sm font-mono"
+                                        placeholder="pegar, correos, separados, por, comas@ejemplo.com"
+                                        value={campaignData.manualRecipients || ""}
+                                        onChange={(e) => setCampaignData({ ...campaignData, manualRecipients: e.target.value })}
+                                    ></textarea>
+                                    <p className="text-xs text-gray-500 mt-1">Ingresa direcciones de correo separadas por comas.</p>
+                                </div>
+                            )}
+
+                            {!campaignData.useManualList && !selectedTagFilter && <p className="text-xs text-red-500 mt-1">* Debes seleccionar una etiqueta.</p>}
+                            {campaignData.useManualList && (!campaignData.manualRecipients || campaignData.manualRecipients.trim().length < 5) && <p className="text-xs text-red-500 mt-1">* Debes ingresar al menos un correo.</p>}
                         </div>
 
                         <div className="mb-4">
@@ -889,6 +980,7 @@ const ConsultationList = () => {
                                         <option value="1">Segundos</option>
                                         <option value="60">Minutos</option>
                                         <option value="3600">Horas</option>
+                                        <option value="86400">Días</option>
                                     </select>
                                 </div>
                             </div>

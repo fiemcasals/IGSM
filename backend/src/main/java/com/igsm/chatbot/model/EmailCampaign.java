@@ -42,6 +42,9 @@ public class EmailCampaign {
     private int intervalSeconds = 60; // Seconds between runs
     private LocalDateTime nextRunTime = LocalDateTime.now();
 
+    @Column(columnDefinition = "TEXT")
+    private String manualRecipients; // Comma separated list of emails
+
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime completedAt;
 
