@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import jakarta.mail.internet.MimeMessage;
+import org.springframework.mail.javamail.MimeMessageHelper;
+
 @Service
 public class EmailService {
 
@@ -15,12 +18,19 @@ public class EmailService {
     private JavaMailSender mailSender;
 
     public void sendEmail(String to, String subject, String body) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("istgsm@gmail.com");
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(body);
-        mailSender.send(message);
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom("istgsm@gmail.com");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, true); // true = isHtml
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Error sending email: " + e.getMessage(), e);
+        }
     }
 
     public void sendBulkEmail(List<String> recipients, String subject, String body) {
