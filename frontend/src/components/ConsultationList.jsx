@@ -859,93 +859,94 @@ const ConsultationList = () => {
                     </div>
                 </div>
             )}
-        </div>
-    )
-}
 
-{/* Template Manager Modal */ }
-{
-    showTemplateManager && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 h-[80vh] flex flex-col">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                        <Edit2 size={20} className="text-blue-600" /> Gestionar Plantillas
-                    </h3>
-                    <button onClick={() => setShowTemplateManager(false)} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
-                </div>
 
-                <div className="flex-1 overflow-hidden flex gap-4">
-                    {/* List */}
-                    <div className="w-1/3 border-r pr-4 overflow-y-auto">
-                        <button
-                            onClick={() => {
-                                document.getElementById('tplName').value = "";
-                                document.getElementById('tplSubject').value = "";
-                                document.getElementById('tplBody').value = "";
-                                setCampaignData({ ...campaignData, templateId: "" });
-                            }}
-                            className="w-full text-left p-2 mb-2 bg-blue-50 text-blue-700 rounded text-sm font-bold"
-                        >
-                            + Nueva Plantilla
-                        </button>
-                        {templates.map(t => (
-                            <div key={t.id} className="border-b py-2 cursor-pointer hover:bg-gray-50 p-1"
-                                onClick={() => {
-                                    document.getElementById('tplName').value = t.name;
-                                    document.getElementById('tplSubject').value = t.subject;
-                                    document.getElementById('tplBody').value = t.body;
-                                }}
-                            >
-                                <div className="font-bold text-sm">{t.name}</div>
-                                <div className="text-xs text-gray-500 truncate">{t.subject}</div>
+            {/* Template Manager Modal */}
+            {
+                showTemplateManager && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 h-[80vh] flex flex-col">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-bold flex items-center gap-2">
+                                    <Edit2 size={20} className="text-blue-600" /> Gestionar Plantillas
+                                </h3>
+                                <button onClick={() => setShowTemplateManager(false)} className="text-gray-500 hover:text-gray-700"><X size={20} /></button>
                             </div>
-                        ))}
-                    </div>
 
-                    {/* Editor (Simplified for now - just creating new one on backend actually) */}
-                    <div className="w-2/3 flex flex-col gap-3">
-                        <div className="bg-yellow-50 p-2 text-xs text-yellow-800 rounded">
-                            * Crea o edita plantillas para usarlas en tus campañas.
+                            <div className="flex-1 overflow-hidden flex gap-4">
+                                {/* List */}
+                                <div className="w-1/3 border-r pr-4 overflow-y-auto">
+                                    <button
+                                        onClick={() => {
+                                            document.getElementById('tplName').value = "";
+                                            document.getElementById('tplSubject').value = "";
+                                            document.getElementById('tplBody').value = "";
+                                            setCampaignData({ ...campaignData, templateId: "" });
+                                        }}
+                                        className="w-full text-left p-2 mb-2 bg-blue-50 text-blue-700 rounded text-sm font-bold"
+                                    >
+                                        + Nueva Plantilla
+                                    </button>
+                                    {templates.map(t => (
+                                        <div key={t.id} className="border-b py-2 cursor-pointer hover:bg-gray-50 p-1"
+                                            onClick={() => {
+                                                document.getElementById('tplName').value = t.name;
+                                                document.getElementById('tplSubject').value = t.subject;
+                                                document.getElementById('tplBody').value = t.body;
+                                            }}
+                                        >
+                                            <div className="font-bold text-sm">{t.name}</div>
+                                            <div className="text-xs text-gray-500 truncate">{t.subject}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Editor (Simplified for now - just creating new one on backend actually) */}
+                                <div className="w-2/3 flex flex-col gap-3">
+                                    <div className="bg-yellow-50 p-2 text-xs text-yellow-800 rounded">
+                                        * Crea o edita plantillas para usarlas en tus campañas.
+                                    </div>
+                                    <input
+                                        className="border p-2 rounded"
+                                        placeholder="Nombre Interno (ej: Promo Verano)"
+                                        id="tplName"
+                                    />
+                                    <input
+                                        className="border p-2 rounded"
+                                        placeholder="Asunto del Correo"
+                                        id="tplSubject"
+                                    />
+                                    <textarea
+                                        className="border p-2 rounded flex-1"
+                                        placeholder="Cuerpo del correo (HTML o Texto)... Usa {{NAME}} para personalizar."
+                                        id="tplBody"
+                                    ></textarea>
+                                    <button
+                                        onClick={() => {
+                                            const name = document.getElementById('tplName').value;
+                                            const subject = document.getElementById('tplSubject').value;
+                                            const body = document.getElementById('tplBody').value;
+                                            if (!name || !subject || !body) return alert("Completa todos los campos");
+
+                                            axios.post('/api/email-templates', { name, subject, body })
+                                                .then(res => {
+                                                    alert("Plantilla Guardada");
+                                                    fetchTemplates();
+                                                    setCampaignData({ ...campaignData, templateId: res.data.id }); // Auto select
+                                                });
+                                        }}
+                                        className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+                                    >
+                                        Guardar Plantilla
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <input
-                            className="border p-2 rounded"
-                            placeholder="Nombre Interno (ej: Promo Verano)"
-                            id="tplName"
-                        />
-                        <input
-                            className="border p-2 rounded"
-                            placeholder="Asunto del Correo"
-                            id="tplSubject"
-                        />
-                        <textarea
-                            className="border p-2 rounded flex-1"
-                            placeholder="Cuerpo del correo (HTML o Texto)... Usa {{NAME}} para personalizar."
-                            id="tplBody"
-                        ></textarea>
-                        <button
-                            onClick={() => {
-                                const name = document.getElementById('tplName').value;
-                                const subject = document.getElementById('tplSubject').value;
-                                const body = document.getElementById('tplBody').value;
-                                if (!name || !subject || !body) return alert("Completa todos los campos");
-
-                                axios.post('/api/email-templates', { name, subject, body })
-                                    .then(res => {
-                                        alert("Plantilla Guardada");
-                                        fetchTemplates();
-                                        setCampaignData({ ...campaignData, templateId: res.data.id }); // Auto select
-                                    });
-                            }}
-                            className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-                        >
-                            Guardar Plantilla
-                        </button>
                     </div>
-                </div>
-            </div>
+                )
+            }
         </div>
-    )
+    );
 };
 
 
